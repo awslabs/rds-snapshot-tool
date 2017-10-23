@@ -2,6 +2,9 @@
 
 The Snapshot Tool for RDS automates the task of creating manual snapshots, copying them into a different account and a different region, and deleting them after a specified number of days. It also allows you to specify the backup schedule (at what times and how often) and a retention period in days. This version will work with all Amazon RDS instances except Amazon Aurora. For a version that works with Amazon Aurora, please visit the [Snapshot Tool for Amazon Aurora](https://github.com/awslabs/aurora-snapshot-tool).
 
+**IMPORTANT** Run the Cloudformation templates on the same **region** where your RDS instances run (both in the source and destination accounts). If that is not possible because AWS Step Functions is not available, you will need to use the **SourceRegionOverride** parameter explained below.
+
+
 ## Getting Started
 
 To deploy on your accounts, you will need to use the Cloudformation templates provided.
