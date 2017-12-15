@@ -65,7 +65,7 @@ def lambda_handler(event, context):
                     logger.info('Could not delete %s ' % snapshot)
 
         else: 
-            logger.info('Not deleting %s. Created only %s' % (snapshot, days_difference)
+            logger.info('Not deleting %s. Created only %s' % (snapshot, days_difference))
 
 
     if pending_delete > 0:
