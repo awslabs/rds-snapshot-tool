@@ -45,6 +45,12 @@
 			"Default": "TRUE",
 			"Description": "Set to TRUE to enable deletion of snapshot based on RetentionDays. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
+		},
+		"CrossAccountCopy": {
+			"Type": "String",
+			"AllowedValues": ["TRUE", "FALSE"],
+			"Default": "TRUE",
+			"Description": "Enable copying snapshots across accounts. Set to FALSE if your source snapshosts are not on a different account"
 		}
 	},
 	"Conditions": {
@@ -57,6 +63,11 @@
 			"Fn::Equals": [{
 				"Ref": "DeleteOldSnapshots"
 			}, "TRUE"]
+		},
+		"CrossAccount": {
+			"Fn::Equals": [{
+				"Ref": "CrossAccountCopy"
+			}, "TRUE" ]
 		}
 	},
 	"Mappings": {
@@ -285,7 +296,7 @@
 							"Ref": "CodeBucket"
 						}]
 					},
-					"S3Key": "copy_snapshots_dest_rds.zip"
+					"S3Key": { "Fn::If" : [ "CrossAccount", "copy_snapshots_dest_rds.zip", "copy_snapshots_no_x_account_rds.zip" ]}
 				},
 				"MemorySize" : 512,
 				"Description": "This functions copies snapshots for RDS Instances shared with this account. It checks for existing snapshots following the pattern specified in the environment variables with the following format: <dbInstanceIdentifier-identifier>-YYYY-MM-DD-HH-MM",
@@ -336,7 +347,7 @@
 							"Ref": "CodeBucket"
 						}]
 					},
-					"S3Key": "delete_old_snapshots_dest_rds.zip"
+					"S3Key": {"Fn::If" : [ "CrossAccount", "delete_old_snapshots_dest_rds.zip", "delete_old_snapshots_no_x_account_rds.zip" ]}
 				},
 				"MemorySize" : 512,
 				"Description": "This function enforces retention on the snapshots shared with the destination account. ",
