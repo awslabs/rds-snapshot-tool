@@ -1,3 +1,9 @@
+# Fork notes
+
+This tool has been forked from the AWSLabs project. The AWS Labs requires the encryption key used to encrypt the source data to be shared with the destination account. This means that only custom keys may be used as the default AWS RDS cannot be shared. I have modified the project to allow the source database to used the default AWS RDS encryption key, and introduced a step after taking a snapshot to copy the snapshot and re-encrypt using a custom key. This adds a new parameter to the source Cloud Formation template:
+
+* **KmsKeyCopy** - Set to the ARN for the KMS key used to re-encrypt the copied encrypted snapshots.
+
 # Snapshot Tool for Amazon RDS 
 
 The Snapshot Tool for RDS automates the task of creating manual snapshots, copying them into a different account and a different region, and deleting them after a specified number of days. It also allows you to specify the backup schedule (at what times and how often) and a retention period in days. This version will work with all Amazon RDS instances except Amazon Aurora. For a version that works with Amazon Aurora, please visit the [Snapshot Tool for Amazon Aurora](https://github.com/awslabs/aurora-snapshot-tool).

@@ -72,7 +72,9 @@ def lambda_handler(event, context):
                     DBSnapshotIdentifier=snapshot_identifier,
                     DBInstanceIdentifier=db_instance['DBInstanceIdentifier'],
                     Tags=[{'Key': 'CreatedBy', 'Value': 'Snapshot Tool for RDS'}, {
-                        'Key': 'CreatedOn', 'Value': timestamp_format}, {'Key': 'shareAndCopy', 'Value': 'YES'}]
+                        'Key': 'CreatedOn', 'Value': timestamp_format},
+                        # switch to a copy only key, this snapshot will be copied with a custom key
+                        {'Key': 'copy', 'Value': 'YES'}]
                 )
             except Exception:
                 pending_backups += 1
