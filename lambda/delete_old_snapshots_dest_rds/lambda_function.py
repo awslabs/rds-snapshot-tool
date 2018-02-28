@@ -25,7 +25,7 @@ from snapshots_tool_utils import *
 # Initialize everything
 DEST_REGION = os.getenv('DEST_REGION', os.getenv('AWS_DEFAULT_REGION')).strip()
 LOGLEVEL = os.getenv('LOG_LEVEL', 'ERROR').strip()
-PATTERN = os.getenv('PATTERN', 'ALL_SNAPSHOTS')
+PATTERN = os.getenv('SNAPSHOT_PATTERN', 'ALL_SNAPSHOTS')
 RETENTION_DAYS = int(os.getenv('RETENTION_DAYS'))
 TIMESTAMP_FORMAT = '%Y-%m-%d-%H-%M'
 
