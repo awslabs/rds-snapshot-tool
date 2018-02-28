@@ -9,8 +9,8 @@ or in the "license" file accompanying this file. This file is distributed on an 
 '''
 
 # copy_snapshots_dest_rds
-# This lambda function will copy shared RDS snapshots that match the regex specified in the environment variable PATTERN, into the account where it runs. If the snapshot is shared and exists in the local region, it will copy it to the region specified in the environment variable DEST_REGION. If it finds that the snapshots are shared, exist in the local and destination regions, it will delete them from the local region. Copying snapshots cross-account and cross-region need to be separate operations. This function will need to run as many times necessary for the workflow to complete.
-# Set PATTERN to a regex that matches your RDS Instance identifiers 
+# This lambda function will copy shared RDS snapshots that match the regex specified in the environment variable SNAPSHOT_PATTERN, into the account where it runs. If the snapshot is shared and exists in the local region, it will copy it to the region specified in the environment variable DEST_REGION. If it finds that the snapshots are shared, exist in the local and destination regions, it will delete them from the local region. Copying snapshots cross-account and cross-region need to be separate operations. This function will need to run as many times necessary for the workflow to complete.
+# Set SNAPSHOT_PATTERN to a regex that matches your RDS Instance identifiers
 # Set DEST_REGION to the destination AWS region
 import boto3
 from datetime import datetime
@@ -78,7 +78,7 @@ def lambda_handler(event, context):
                 else:
                     logger.info('Not copying %s locally. Older than %s days' % (shared_identifier, RETENTION_DAYS))
 
-            else: 
+            else:
                 logger.info('Not copying %s locally. No valid timestamp' % shared_identifier)
 
 
@@ -87,7 +87,7 @@ def lambda_handler(event, context):
             if own_snapshots[shared_identifier]['Status'] == 'available':
                 try:
                     copy_remote(shared_identifier, own_snapshots[shared_identifier])
-                 
+
                 except Exception:
                     pending_copies += 1
                     logger.error('Remote copy pending: %s: %s' % (

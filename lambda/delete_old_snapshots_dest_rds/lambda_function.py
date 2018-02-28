@@ -9,8 +9,8 @@ or in the "license" file accompanying this file. This file is distributed on an 
 '''
 
 # delete_old_snapshots_dest_rds
-# This lambda function will delete manual RDS snapshots that have expired in the region specified in the environment variable DEST_REGION, and according to the environment variables PATTERN and RETENTION_DAYS.
-# Set PATTERN to a regex that matches your RDS Instance identifiers 
+# This lambda function will delete manual RDS snapshots that have expired in the region specified in the environment variable DEST_REGION, and according to the environment variables SNAPSHOT_PATTERN and RETENTION_DAYS.
+# Set SNAPSHOT_PATTERN to a regex that matches your RDS Instance identifiers
 # Set DEST_REGION to the destination AWS region
 # Set RETENTION_DAYS to the amount of days snapshots need to be kept before deleting
 import boto3
@@ -25,7 +25,7 @@ from snapshots_tool_utils import *
 # Initialize everything
 DEST_REGION = os.getenv('DEST_REGION', os.getenv('AWS_DEFAULT_REGION')).strip()
 LOGLEVEL = os.getenv('LOG_LEVEL', 'ERROR').strip()
-PATTERN = os.getenv('PATTERN', 'ALL_SNAPSHOTS')
+PATTERN = os.getenv('SNAPSHOT_PATTERN', 'ALL_SNAPSHOTS')
 RETENTION_DAYS = int(os.getenv('RETENTION_DAYS'))
 TIMESTAMP_FORMAT = '%Y-%m-%d-%H-%M'
 
