@@ -353,11 +353,7 @@
 				"Description": "This function enforces retention on the snapshots shared with the destination account. ",
 				"Environment": {
 					"Variables": {
-<<<<<<< HEAD
 						"SNAPSHOT_PATTERN": {
-=======
-					    "SNAPSHOT_PATTERN": {
->>>>>>> test-no-x-account
 							"Ref": "SnapshotPattern"
 						},
 						"DEST_REGION": {
