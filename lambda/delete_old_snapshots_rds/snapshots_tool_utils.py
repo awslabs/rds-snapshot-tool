@@ -88,34 +88,6 @@ def search_tag_copied(response):
 
     return False
 
-def get_own_snapshots_no_x_account(pattern, response, REGION):
-    # Filters our own snapshots
-    filtered = {}
-    for snapshot in response['DBSnapshots']:
-
-        client = boto3.client('rds', region_name=REGION)
-        response_tags = client.list_tags_for_resource(
-            ResourceName=snapshot['DBSnapshotArn'])
-
-        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
-            client = boto3.client('rds', region_name=REGION)
-            response_tags = client.list_tags_for_resource(
-                ResourceName=snapshot['DBSnapshotArn'])
-
-            if search_tag_created(response_tags):
-                filtered[snapshot['DBSnapshotIdentifier']] = {
-                    'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
-        #Changed the next line to search for ALL_CLUSTERS or ALL_SNAPSHOTS so it will work with no-x-account
-        elif snapshot['SnapshotType'] == 'manual' and pattern == 'ALL_SNAPSHOTS' and snapshot['Engine'] in _SUPPORTED_ENGINES:
-            client = boto3.client('rds', region_name=REGION)
-            response_tags = client.list_tags_for_resource(
-                ResourceName=snapshot['DBSnapshotArn'])
-
-            if search_tag_created(response_tags):
-                filtered[snapshot['DBSnapshotIdentifier']] = {
-                    'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
-
-    return filtered
 
 
 def get_shared_snapshots(pattern, response):
@@ -201,7 +173,7 @@ def get_own_snapshots_source(pattern, response):
                 filtered[snapshot['DBSnapshotIdentifier']] = {
                     'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
 
-        elif snapshot['SnapshotType'] == 'manual' and (pattern == 'ALL_CLUSTERS' or pattern == 'ALL_SNAPSHOTS') and snapshot['Engine'] in _SUPPORTED_ENGINES:
+        elif snapshot['SnapshotType'] == 'manual' and pattern == 'ALL_INSTANCES' and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=_REGION)
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot['DBSnapshotArn'])
