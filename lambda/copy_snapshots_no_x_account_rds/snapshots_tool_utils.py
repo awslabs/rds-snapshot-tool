@@ -37,7 +37,7 @@ if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
 else:
     _REGION = os.getenv('AWS_DEFAULT_REGION')
 
-_SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-ee', 'postgres' ] 
+_SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-ee', 'postgres' ]
 
 logger = logging.getLogger()
 logger.setLevel(_LOGLEVEL.upper())
@@ -201,7 +201,7 @@ def get_own_snapshots_source(pattern, response):
                 filtered[snapshot['DBSnapshotIdentifier']] = {
                     'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
 
-        elif snapshot['SnapshotType'] == 'manual' and (pattern == 'ALL_CLUSTERS' or pattern == 'ALL_SNAPSHOTS') and snapshot['Engine'] in _SUPPORTED_ENGINES:
+        elif snapshot['SnapshotType'] == 'manual' and (pattern == 'ALL_CLUSTERS' or pattern == 'ALL_SNAPSHOTS' or pattern == 'ALL_INSTANCES') and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=_REGION)
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot['DBSnapshotArn'])
@@ -350,6 +350,3 @@ def copy_remote(snapshot_identifier, snapshot_object):
             CopyTags = True)
 
     return response
-
-
-
