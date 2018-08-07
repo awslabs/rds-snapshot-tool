@@ -5,7 +5,9 @@
 # or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
 # Makefile for generating zip files for lambda functions and then copying them
-# to S3 for deployment.
+# to S3 for deployment. This Makefile will NOT WORK unless you fill in the S3DEST
+# and AWSARGS variables below. Once those parameters are established, simply type
+# 'make' or 'gmake' (depending on your UNIX-like OS) and it will build. 
 #
 # Behaviour: 
 # Creates a file named ._foo.whatever based on foo.whatever.Uploads foo.whatever to
@@ -14,11 +16,11 @@
 
 # Override S3 destination by changing this variable or setting it in the
 # environment
-S3DEST?=re17-gd-cfn
+S3DEST?=[YOUR BUCKET HERE]
 
 # Set these if, for example, you use profiles on the AWS command line
 # or if your 'aws' executable is in a weird place.
-AWSARGS=--region us-east-1 --profile re17Admin
+AWSARGS=--region [YOUR REGION] --profile [YOUR PROFILE, or 'default', or remove this]
 AWSCMD=aws
 ZIPCMD=zip
 
@@ -43,10 +45,6 @@ clean:
 		--grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 	cp "$<" "$@"
 
+# This rule is a BSD make style rule that says "to make foo.zip, call
 %.zip: %
 	$(ZIPCMD) -jr "$@" "$<" snapshots_tool_utils.py
-
-install: 
-	"$(AWSCMD)" $(AWSARGS) cloudformation create-stack --template-url \
-		"https://$(S3DEST).s3.amazonaws.com/challenge-2-cfn.yaml" \
-		 --capabilities CAPABILITY_IAM --stack-name gd-re17-C
