@@ -39,12 +39,26 @@ else:
 
 _SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-ee', 'postgres' ]
 
+
 logger = logging.getLogger()
 logger.setLevel(_LOGLEVEL.upper())
 
 
 class SnapshotToolException(Exception):
     pass
+
+
+def search_tag_copydbsnapshot(response):
+# Takes a list_tags_for_resource response and searches for our CopyDBSnapshot tag
+    try:
+
+        for tag in response['TagList']:
+            if tag['Key'] == 'CopyDBSnapshot' and tag['Value'] == 'True': return True
+
+    except Exception: return False
+
+    else: return False
+
 
 
 def search_tag_created(response):
@@ -165,20 +179,26 @@ def get_own_snapshots_dest(pattern, response):
 
     return filtered
 
-def filter_instances(pattern, instance_list):
+def filter_instances(taggedinstance, pattern, instance_list):
 # Takes the response from describe-db-instances and filters according to pattern in DBInstanceIdentifier
     filtered_list = []
 
     for instance in instance_list['DBInstances']:
 
+        if taggedinstance == 'TRUE':
+            client = boto3.client('rds', region_name=_REGION)
+            response = client.list_tags_for_resource(ResourceName=instance['DBInstanceArn'])
+
         if pattern == 'ALL_INSTANCES' and instance['Engine'] in _SUPPORTED_ENGINES:
-            filtered_list.append(instance)
+            if (taggedinstance == 'TRUE' and search_tag_copydbsnapshot(response)) or taggedinstance == 'FALSE':
+                filtered_list.append(instance)
 
         else:
             match = re.search(pattern, instance['DBInstanceIdentifier'])
 
             if match and instance['Engine'] in _SUPPORTED_ENGINES:
-                filtered_list.append(instance)
+                if (taggedinstance == 'TRUE' and search_tag_copydbsnapshot(response)) or taggedinstance == 'FALSE':
+                    filtered_list.append(instance)
 
     return filtered_list
 

@@ -51,6 +51,12 @@
 			"Default": "TRUE",
 			"Description": "Set to TRUE to enable deletion of snapshot based on RetentionDays. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
+		},
+		"TaggedInstance": {
+			"Type": "String",
+			"Default": "FALSE",
+			"Description": "Set to TRUE to filter instances that have tag CopyDBSnapshot set to True. Set to FALSE to disable",
+			"AllowedValues": ["TRUE", "FALSE"]
 		}
 	},
 	"Conditions": {
@@ -307,6 +313,9 @@
 						},
 						"REGION_OVERRIDE": {
 							"Ref": "SourceRegionOverride"
+						},
+						"TAGGEDINSTANCE": {
+							"Ref": "TaggedInstance"
 						}
 					}
 				},
