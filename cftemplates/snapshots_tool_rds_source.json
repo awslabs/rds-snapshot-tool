@@ -41,6 +41,11 @@
 			"Default": "ERROR",
 			"Description": "Log level for Lambda functions (DEBUG, INFO, WARN, ERROR, CRITICAL are valid values)."
 		},
+		"LambdaCWLogRetention": {
+			"Type": "Number",
+			"Default": "7",
+			"Description": "Number of days to retain logs from the lambda functions in CloudWatch Logs"
+		},
 		"SourceRegionOverride": {
 			"Type": "String",
 			"Default": "NO",
@@ -50,6 +55,12 @@
 			"Type": "String",
 			"Default": "TRUE",
 			"Description": "Set to TRUE to enable deletion of snapshot based on RetentionDays. Set to FALSE to disable",
+			"AllowedValues": ["TRUE", "FALSE"]
+		},
+		"TaggedInstance": {
+			"Type": "String",
+			"Default": "FALSE",
+			"Description": "Set to TRUE to filter instances that have tag CopyDBSnapshot set to True. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
 		}
 	},
@@ -307,6 +318,9 @@
 						},
 						"REGION_OVERRIDE": {
 							"Ref": "SourceRegionOverride"
+						},
+						"TAGGEDINSTANCE": {
+							"Ref": "TaggedInstance"
 						}
 					}
 				},
@@ -671,6 +685,39 @@
 					}
 				}]
 			}
+		},
+		"cwloggrouplambdaTakeSnapshotsRDS":{
+			"Type": "AWS::Logs::LogGroup",
+			"Description": "Log group for the lambdaTakeSnapshotsRDS function's logs",
+			"DependsOn": "lambdaTakeSnapshotsRDS",
+			"Properties": {
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
+				"LogGroupName": { 
+					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaTakeSnapshotsRDS" } } ]
+				}
+			}
+		},
+		"cwloggrouplambdaShareSnapshotsRDS":{
+			"Type": "AWS::Logs::LogGroup",
+			"Description": "Log group for the lambdaShareSnapshotsRDS function's logs",
+			"DependsOn": "lambdaShareSnapshotsRDS",
+			"Properties": {
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
+				"LogGroupName": { 
+					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaShareSnapshotsRDS" } } ]
+				}
+			}
+		},
+		"cwloggrouplambdaDeleteOldSnapshotsRDS":{
+			"Type": "AWS::Logs::LogGroup",
+			"Description": "Log group for the lambdaDeleteOldSnapshotsRDS function's logs",
+			"DependsOn": "lambdaDeleteOldSnapshotsRDS",
+			"Properties": {
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
+				"LogGroupName": { 
+					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaDeleteOldSnapshotsRDS" } } ]
+				}
+			}
 		}
 	},
 	"Outputs": {
@@ -693,6 +740,10 @@
 			"Value": {
 				"Ref": "topicDeleteOldFailed"
 			}
+		},
+		"SourceURL": {
+			"Description": "For more information and documentation, see the source repository at GitHub.",
+			"Value": "https://github.com/awslabs/rds-snapshot-tool"
 		}
 	},
 	"Description": "Snapshots Tool for RDS cross-region and cross-account (source account stack)"
