@@ -29,7 +29,7 @@ If your instances are encrypted, you will need to provide access to the KMS Key 
 Here is a break down of each parameter for the source template:
 
 * **BackupInterval** - how many hours between backup
-* **BackupSchedule** - at what times and how often to run backups. Set in accordance with **BackupInterval**. For example, set **BackupInterval** to 8 hours and **BackupSchedule** 0 0,8,16 * * ? * if you want backups to run at 0, 8 and 16 UTC. If your backups run more often than **BackupInterval**, snapshots will only be created when the latest snapshot is older than **BackupInterval**
+* **BackupSchedule** - at what times and how often to run backups. Set in accordance with **BackupInterval**. For example, set **BackupInterval** to 8 hours and **BackupSchedule** 0 0,8,16 * * ? * if you want backups to run at 0, 8 and 16 UTC. If your backups run more often than **BackupInterval**, snapshots will only be created when the latest snapshot is older than **BackupInterval**. If you set BackupInterval to more than once a day, make sure to adjust BackupSchedule accordingly or backups will only be taken at the times specified in the CRON expression.
 * **InstanceNamePattern** - set to the names of the instances you want this tool to back up. You can use a Python regex that will be searched in the instance identifier. For example, if your instances are named *prod-01*, *prod-02*, etc, you can set **InstanceNamePattern** to *prod*. The string you specify will be searched anywhere in the name unless you use an anchor such as ^ or $. In most cases, a simple name like "prod" or "dev" will suffice. More information on Python regular expressions here: https://docs.python.org/2/howto/regex.html
 * **DestinationAccount** - the account where you want snapshots to be copied to
 * **LogLevel** - The log level you want as output to the Lambda functions. ERROR is usually enough. You can increase to INFO or DEBUG.
@@ -39,8 +39,9 @@ Here is a break down of each parameter for the source template:
 **IMPORTANT**: deploy to the closest regions for best results.
 
 * **CodeBucket** - this parameter specifies the bucket where the code for the Lambda functions is located. Leave to DEFAULT_BUCKET to download from an AWS-managed bucket. The Lambda function code is located in the ```lambda``` directory. These files need to be on the **root* of the bucket or the CloudFormation templates will fail.
-* **DeleteOldSnapshots** - Set to TRUE to enable functionanility that will delete snapshots after **RetentionDays**. Set to FALSE if you want to disable this functionality completely. (Associated Lambda and State Machine resources will not be created in the account). **WARNING** If you decide to enable this functionality later on, bear in mind it will delete **all snapshots**, older than **RetentionDays**, created by this tool; not just the ones created after **DeleteOldSnapshots** is set to TRUE.
+* **DeleteOldSnapshots** - Set to TRUE to enable functionality that will delete snapshots after **RetentionDays**. Set to FALSE if you want to disable this functionality completely. (Associated Lambda and State Machine resources will not be created in the account). **WARNING** If you decide to enable this functionality later on, bear in mind it will delete **all snapshots**, older than **RetentionDays**, created by this tool; not just the ones created after **DeleteOldSnapshots** is set to TRUE.
 * **ShareSnapshots** - Set to TRUE to enable functionality that will share snapshots with **DestAccount**. Set to FALSE to completely disable sharing. (Associated Lambda and State Machine resources will not be created in the account.)
+* **TaggedInstance** - Set to TRUE to enable functionality that will only take snapshots for RDS Instances with tag CopyDBSnapshot set to True. The settings in InstanceNamePattern and TaggedInstance both need to evaluate successfully for a snapshot to be created (logical AND).
 
 ### Destination Account
 #### Components
