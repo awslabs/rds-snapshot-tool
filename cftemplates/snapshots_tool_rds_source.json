@@ -103,6 +103,24 @@
 			},
 			"eu-central-1": {
 				"Bucket": "snapshots-tool-rds-eu-central-1"
+			},
+			"eu-west-1": {
+				"Bucket": "snapshots-tool-rds-eu-central-1"
+			},
+			"ca-central-1": {
+				"Bucket": "snapshots-tool-rds-ca-central-1"
+			},
+			"eu-west-2": {
+				"Bucket": "snapshots-tool-rds-eu-west-2"
+			},
+			"us-west-1": {
+				"Bucket": "snapshots-tool-rds-us-west-1"
+			},
+			"ap-northeast-2": {
+				"Bucket": "snapshots-tool-rds-ap-northeast-2"
+			},
+			"ap-southeast-1": {
+				"Bucket": "snapshots-tool-rds-ap-southeast-1-real"
 			}
 		}
 	},
@@ -391,7 +409,7 @@
 					"S3Key": "delete_old_snapshots_rds.zip"
 				},
 				"MemorySize" : 512,
-				"Description": "This function shares snapshots created by the take_snapshots_rds function with DEST_ACCOUNT specified in the environment variables. ",
+				"Description": "This function deletes snapshots created by the take_snapshots_rds function. ",
 				"Environment": {
 					"Variables": {
 						"RETENTION_DAYS": {
@@ -698,6 +716,7 @@
 			}
 		},
 		"cwloggrouplambdaShareSnapshotsRDS":{
+			"Condition": "Share",
 			"Type": "AWS::Logs::LogGroup",
 			"Description": "Log group for the lambdaShareSnapshotsRDS function's logs",
 			"DependsOn": "lambdaShareSnapshotsRDS",

@@ -97,6 +97,21 @@
 			},
 			"eu-central-1": {
 				"Bucket": "snapshots-tool-rds-eu-central-1"
+			},
+			"ca-central-1": {
+				"Bucket": "snapshots-tool-rds-ca-central-1"
+			},
+			"eu-west-2": {
+				"Bucket": "snapshots-tool-rds-eu-west-2"
+			},
+			"us-west-1": {
+				"Bucket": "snapshots-tool-rds-us-west-1"
+			},
+			"ap-northeast-2": {
+				"Bucket": "snapshots-tool-rds-ap-northeast-2"
+			},
+			"ap-southeast-1": {
+				"Bucket": "snapshots-tool-rds-ap-southeast-1-real"
 			}
 		}
 	},
