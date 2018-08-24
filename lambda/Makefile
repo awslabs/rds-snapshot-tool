@@ -27,24 +27,25 @@ ZIPCMD=zip
 # disable all implicit make rules
 .SUFFIXES:
 
-# if you define "._foo.zip" as a file on this line, then it will look for
-# a folder called foo, copy the standard files into it, and then make foo.zip.
-all:	._copy_snapshots_dest_rds.zip \
-	._copy_snapshots_no_x_account_rds.zip \
-	._delete_old_snapshots_dest_rds.zip \
-	._delete_old_snapshots_no_x_account_rds.zip \
-	._delete_old_snapshots_rds.zip \
-	._share_snapshots_rds.zip \
-	._take_snapshots_rds.zip
+# if you define "._foo" as a file on this line, then it will zip up a
+# folder called foo, adding a standard file into it to make foo.zip.
+all:	._copy_snapshots_dest_rds \
+	._copy_snapshots_no_x_account_rds \
+	._delete_old_snapshots_dest_rds \
+	._delete_old_snapshots_no_x_account_rds \
+	._delete_old_snapshots_rds \
+	._share_snapshots_rds \
+	._take_snapshots_rds
 
 clean:
 	rm -f ._*
 
-._%: %
+._%: %.zip
 	"$(AWSCMD)" $(AWSARGS) s3 cp "$<" "s3://$(S3DEST)" \
 		--grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 	cp "$<" "$@"
 
 # This rule is a BSD make style rule that says "to make foo.zip, call
+# 'zip -jqr foo snapshot_tool_utils.py'"
 %.zip: %
-	$(ZIPCMD) -jr "$@" "$<" snapshots_tool_utils.py
+	$(ZIPCMD) -jqr "$@" "$<" snapshots_tool_utils.py
