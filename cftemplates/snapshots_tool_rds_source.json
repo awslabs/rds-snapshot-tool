@@ -104,9 +104,6 @@
 			"eu-central-1": {
 				"Bucket": "snapshots-tool-rds-eu-central-1"
 			},
-			"eu-west-1": {
-				"Bucket": "snapshots-tool-rds-eu-central-1"
-			},
 			"ca-central-1": {
 				"Bucket": "snapshots-tool-rds-ca-central-1"
 			},
