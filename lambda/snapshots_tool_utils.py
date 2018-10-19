@@ -116,7 +116,7 @@ def get_own_snapshots_no_x_account(pattern, response, REGION):
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot['DBSnapshotArn'])
 
-            if search_tag_created(response_tags):
+            if search_tag_copied(response_tags):
                 filtered[snapshot['DBSnapshotIdentifier']] = {
                     'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
         #Changed the next line to search for ALL_CLUSTERS or ALL_SNAPSHOTS so it will work with no-x-account
@@ -125,7 +125,7 @@ def get_own_snapshots_no_x_account(pattern, response, REGION):
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot['DBSnapshotArn'])
 
-            if search_tag_created(response_tags):
+            if search_tag_copied(response_tags):
                 filtered[snapshot['DBSnapshotIdentifier']] = {
                     'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
 
