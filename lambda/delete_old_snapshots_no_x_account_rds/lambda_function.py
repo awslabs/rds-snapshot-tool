@@ -54,7 +54,7 @@ def lambda_handler(event, context):
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot_arn)
 
-            if search_tag_created(response_tags):
+            if search_tag_copied(response_tags):
 
                 difference = datetime.now() - creation_date
                 days_difference = difference.total_seconds() / 3600 / 24
