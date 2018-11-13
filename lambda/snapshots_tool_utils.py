@@ -107,10 +107,6 @@ def get_own_snapshots_no_x_account(pattern, response, REGION):
     filtered = {}
     for snapshot in response['DBSnapshots']:
 
-        client = boto3.client('rds', region_name=REGION)
-        response_tags = client.list_tags_for_resource(
-            ResourceName=snapshot['DBSnapshotArn'])
-
         if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=REGION)
             response_tags = client.list_tags_for_resource(
@@ -207,10 +203,6 @@ def get_own_snapshots_source(pattern, response):
 # Filters our own snapshots
     filtered = {}
     for snapshot in response['DBSnapshots']:
-
-        client = boto3.client('rds', region_name=_REGION)
-        response_tags = client.list_tags_for_resource(
-            ResourceName=snapshot['DBSnapshotArn'])
 
         if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=_REGION)
