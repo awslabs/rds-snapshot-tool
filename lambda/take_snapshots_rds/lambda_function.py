@@ -46,7 +46,7 @@ def lambda_handler(event, context):
     now = datetime.now()
     pending_backups = 0
     filtered_instances = filter_instances(TAGGEDINSTANCE, PATTERN, response)
-    filtered_snapshots = get_own_snapshots_source(PATTERN, paginate_api_call(client, 'describe_db_snapshots', 'DBSnapshots'))
+    filtered_snapshots = get_own_snapshots_source(PATTERN, paginate_api_call(client, 'describe_db_snapshots', 'DBSnapshots'), BACKUP_INTERVAL)
 
     for db_instance in filtered_instances:
 
