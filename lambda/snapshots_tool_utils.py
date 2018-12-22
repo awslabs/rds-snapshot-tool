@@ -13,8 +13,7 @@ or in the "license" file accompanying this file. This file is distributed on an 
 # Support module for the Snapshot Tool for RDS
 
 import boto3
-from datetime import datetime
-import time
+from datetime import datetime, timedelta
 import os
 import logging
 import re
@@ -199,10 +198,13 @@ def filter_instances(taggedinstance, pattern, instance_list):
     return filtered_list
 
 
-def get_own_snapshots_source(pattern, response):
+def get_own_snapshots_source(pattern, response, backup_interval=None):
 # Filters our own snapshots
     filtered = {}
     for snapshot in response['DBSnapshots']:
+        # No need to get tags for snapshots outside of the backup interval
+        if backup_interval and snapshot['SnapshotCreateTime'].replace(tzinfo=None) < datetime.utcnow().replace(tzinfo=None) - timedelta(hours=backup_interval):
+            continue
 
         if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=_REGION)
