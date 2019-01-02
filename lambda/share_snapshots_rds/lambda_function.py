@@ -59,8 +59,8 @@ def lambda_handler(event, context):
                         DEST_ACCOUNTID
                     ]
                 )
-            except Exception:
-                logger.error('Exception sharing %s' % snapshot_identifier)
+            except Exception as e:
+                logger.error('Exception sharing %s (%s)' % (snapshot_identifier, e))
                 pending_snapshots += 1
 
     if pending_snapshots > 0:
