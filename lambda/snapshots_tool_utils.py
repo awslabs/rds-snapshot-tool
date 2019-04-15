@@ -201,7 +201,9 @@ def filter_instances(taggedinstance, pattern, instance_list):
 def get_own_snapshots_source(pattern, response, backup_interval=None):
 # Filters our own snapshots
     filtered = {}
+
     for snapshot in response['DBSnapshots']:
+
         # No need to get tags for snapshots outside of the backup interval
         if backup_interval and snapshot['SnapshotCreateTime'].replace(tzinfo=None) < datetime.utcnow().replace(tzinfo=None) - timedelta(hours=backup_interval):
             continue
@@ -294,26 +296,18 @@ def requires_backup(backup_interval, instance, filtered_snapshots):
 def paginate_api_call(client, api_call, objecttype, *args, **kwargs):
 #Takes an RDS boto client and paginates through api_call calls and returns a list of objects of objecttype
     response = {}
-    kwargs_string = ','.join([ '%s=%s' % (arg,value) for arg,value in kwargs.items() ])
+    response[objecttype] = []
 
-    if kwargs:
-        temp_response = eval('client.%s(%s)' % (api_call, kwargs_string))
-    else:
-        temp_response = eval('client.%s()' % api_call)
-    response[objecttype] = temp_response[objecttype][:]
+    # Create a paginator
+    paginator = client.get_paginator(api_call)
 
-    while 'Marker' in temp_response:
-        if kwargs:
-            temp_response = eval('client.%s(Marker="%s",%s)' % (api_call, temp_response['Marker'], kwargs_string))
-        else:
-            temp_response = eval('client.%s(Marker="%s")' % (api_call, temp_response['Marker']))
-        for obj in temp_response[objecttype]:
-            response[objecttype].append(obj)
+    # Create a PageIterator from the Paginator
+    page_iterator = paginator.paginate(**kwargs)
+    for page in page_iterator:
+        for item in page[objecttype]:
+            response[objecttype].append(item)
 
     return response
-
-
-
 
 
 def copy_local(snapshot_identifier, snapshot_object):
