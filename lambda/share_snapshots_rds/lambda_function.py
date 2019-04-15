@@ -40,7 +40,7 @@ logger.setLevel(LOGLEVEL.upper())
 def lambda_handler(event, context):
     pending_snapshots = 0
     client = boto3.client('rds', region_name=REGION)
-    response = paginate_api_call(client, 'describe_db_snapshots', 'DBSnapshots')
+    response = paginate_api_call(client, 'describe_db_snapshots', 'DBSnapshots', SnapshotType='manual')
     filtered = get_own_snapshots_source(PATTERN, response)
 
     # Search all snapshots for the correct tag
