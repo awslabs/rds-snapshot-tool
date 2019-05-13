@@ -106,7 +106,7 @@ def get_own_snapshots_no_x_account(pattern, response, REGION):
     filtered = {}
     for snapshot in response['DBSnapshots']:
 
-        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
+        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBInstanceIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=REGION)
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot['DBSnapshotArn'])
@@ -131,7 +131,7 @@ def get_shared_snapshots(pattern, response):
 # Returns a dict with only shared snapshots filtered by pattern, with DBSnapshotIdentifier as key and the response as attribute
     filtered = {}
     for snapshot in response['DBSnapshots']:
-        if snapshot['SnapshotType'] == 'shared' and re.search(pattern, get_snapshot_identifier(snapshot)) and snapshot['Engine'] in _SUPPORTED_ENGINES:
+        if snapshot['SnapshotType'] == 'shared' and re.search(pattern, snapshot['DBInstanceIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             filtered[get_snapshot_identifier(snapshot)] = {
                 'Arn': snapshot['DBSnapshotIdentifier'], 'Encrypted': snapshot['Encrypted'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
             if snapshot['Encrypted'] is True:
@@ -158,7 +158,7 @@ def get_own_snapshots_dest(pattern, response):
     filtered = {}
     for snapshot in response['DBSnapshots']:
 
-        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
+        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBInstanceIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             filtered[snapshot['DBSnapshotIdentifier']] = {
                 'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'Encrypted': snapshot['Encrypted'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
 
@@ -208,7 +208,7 @@ def get_own_snapshots_source(pattern, response, backup_interval=None):
         if backup_interval and snapshot['SnapshotCreateTime'].replace(tzinfo=None) < datetime.utcnow().replace(tzinfo=None) - timedelta(hours=backup_interval):
             continue
 
-        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBSnapshotIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
+        if snapshot['SnapshotType'] == 'manual' and re.search(pattern, snapshot['DBInstanceIdentifier']) and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=_REGION)
             response_tags = client.list_tags_for_resource(
                 ResourceName=snapshot['DBSnapshotArn'])
