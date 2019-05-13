@@ -69,10 +69,10 @@ def lambda_handler(event, context):
                         try:
                             copy_remote(source_identifier, own_snapshots_encryption[source_identifier])
                  
-                        except Exception:
+                        except Exception as e:
                             pending_copies += 1
-                            logger.error('Remote copy pending: %s: %s' % (
-                                source_identifier, source_snapshots[source_identifier]['Arn']))
+                            logger.error('Remote copy pending: %s: %s (%s)' % (
+                                source_identifier, source_snapshots[source_identifier]['Arn'], e))
                     else:
                         pending_copies += 1
                         logger.error('Remote copy pending: %s: %s' % (

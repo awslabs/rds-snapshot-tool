@@ -76,8 +76,9 @@ def lambda_handler(event, context):
                     Tags=[{'Key': 'CreatedBy', 'Value': 'Snapshot Tool for RDS'}, {
                         'Key': 'CreatedOn', 'Value': timestamp_format}, {'Key': 'shareAndCopy', 'Value': 'YES'}]
                 )
-            except Exception:
+            except Exception as e:
                 pending_backups += 1
+                logger.info('Could not create snapshot %s (%s)' % (snapshot_identifier, e))
         else:
 
             backup_age = get_latest_snapshot_ts(
