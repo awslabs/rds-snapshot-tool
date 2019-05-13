@@ -62,7 +62,12 @@
 			"Default": "FALSE",
 			"Description": "Set to TRUE to filter instances that have tag CopyDBSnapshot set to True. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
-		}
+		},
+                "LogGroupName": {
+                        "Type": "String",
+                        "Default": "lambdaDeleteOldSnapshotsRDS-source",
+                        "Description": "Name for RDS snapshot log group."
+                }
 	},
 	"Conditions": {
 		"Share": {
@@ -727,11 +732,10 @@
 		"cwloggrouplambdaDeleteOldSnapshotsRDS":{
 			"Type": "AWS::Logs::LogGroup",
 			"Description": "Log group for the lambdaDeleteOldSnapshotsRDS function's logs",
-			"DependsOn": "lambdaDeleteOldSnapshotsRDS",
 			"Properties": {
-				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" },
 				"LogGroupName": { 
-					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaDeleteOldSnapshotsRDS" } } ]
+					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "LogGroupName" } } ]
 				}
 			}
 		}
