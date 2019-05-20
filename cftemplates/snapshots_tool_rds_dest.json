@@ -596,6 +596,7 @@
 		"cwloggroupDeleteOldSnapshotsDestRDS":{
 			"Type": "AWS::Logs::LogGroup",
 			"Description": "Log group for the lambdaCopySnapshotsRDS function's logs",
+			"Condition": "DeleteOld",
 			"DependsOn": "lambdaDeleteOldDestRDS",
 			"Properties": {
 				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
