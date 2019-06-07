@@ -203,6 +203,10 @@ def get_own_snapshots_source(pattern, response, backup_interval=None):
     filtered = {}
 
     for snapshot in response['DBSnapshots']:
+        
+        # No need to consider snapshots that are still in progress
+        if 'SnapshotCreateTime' not in snapshot:
+            continue
 
         # No need to get tags for snapshots outside of the backup interval
         if backup_interval and snapshot['SnapshotCreateTime'].replace(tzinfo=None) < datetime.utcnow().replace(tzinfo=None) - timedelta(hours=backup_interval):
