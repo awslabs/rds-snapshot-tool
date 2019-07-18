@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 import os
 import logging
 import re
+from retry import retry
 
 
 # Initialize everything
@@ -217,15 +218,17 @@ def get_own_snapshots_source(pattern, response, backup_interval=None):
 
         elif snapshot['SnapshotType'] == 'manual' and (pattern == 'ALL_CLUSTERS' or pattern == 'ALL_SNAPSHOTS' or pattern == 'ALL_INSTANCES') and snapshot['Engine'] in _SUPPORTED_ENGINES:
             client = boto3.client('rds', region_name=_REGION)
-            response_tags = client.list_tags_for_resource(
-                ResourceName=snapshot['DBSnapshotArn'])
-
+            response_tags = get_list_tags_for_resources(client, snapshot)
             if search_tag_created(response_tags):
                 filtered[snapshot['DBSnapshotIdentifier']] = {
                     'Arn': snapshot['DBSnapshotArn'], 'Status': snapshot['Status'], 'DBInstanceIdentifier': snapshot['DBInstanceIdentifier']}
 
     return filtered
 
+@retry(tries=30, delay=3)
+def get_list_tags_for_resources(client, snapshot):
+    response_tags = client.list_tags_for_resource(ResourceName=snapshot['DBSnapshotArn'])
+    return response_tags
 
 def get_timestamp_no_minute(snapshot_identifier, snapshot_list):
 # Get a timestamp from the name of a snapshot and strip out the minutes
