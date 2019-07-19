@@ -39,6 +39,7 @@ all:	._copy_snapshots_dest_rds \
 
 clean:
 	rm -f ._*
+	rm -rf package/*
 
 ._%: %.zip
 	"$(AWSCMD)" $(AWSARGS) s3 cp "$<" "s3://$(S3DEST)" \

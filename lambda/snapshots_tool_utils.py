@@ -18,6 +18,7 @@ import os
 import logging
 import re
 from retry import retry
+from botocore.exceptions import ClientError
 
 
 # Initialize everything
@@ -45,6 +46,10 @@ logger.setLevel(_LOGLEVEL.upper())
 
 
 class SnapshotToolException(Exception):
+    pass
+
+
+class RateLimitExceededError(Exception):
     pass
 
 
@@ -225,9 +230,15 @@ def get_own_snapshots_source(pattern, response, backup_interval=None):
 
     return filtered
 
-@retry(tries=30, delay=3)
+@retry(exceptions=RateLimitExceededError, tries=30, delay=3)
 def get_list_tags_for_resources(client, snapshot):
-    response_tags = client.list_tags_for_resource(ResourceName=snapshot['DBSnapshotArn'])
+    try:
+        response_tags = client.list_tags_for_resource(ResourceName=snapshot['DBSnapshotArn'])
+    except ClientError as e:
+        if e.response['Error']['Code'] != 'Throttling':
+            raise e
+        else:
+            raise RateLimitExceededError(logger.error('ERROR %s', e.response['Error']['Message']))
     return response_tags
 
 def get_timestamp_no_minute(snapshot_identifier, snapshot_list):
