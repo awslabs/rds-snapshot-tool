@@ -54,35 +54,40 @@ def lambda_handler(event, context):
 
         if requires_backup(BACKUP_INTERVAL, db_instance, filtered_snapshots):
 
-            backup_age = get_latest_snapshot_ts(
-                db_instance['DBInstanceIdentifier'],
-                filtered_snapshots)
+            backup_age = get_latest_snapshot_ts(db_instance['DBInstanceIdentifier'], filtered_snapshots)
 
             if backup_age is not None:
                 logger.info('Backing up %s. Backed up %s minutes ago' % (
                     db_instance['DBInstanceIdentifier'], ((now - backup_age).total_seconds() / 60)))
 
             else:
-                logger.info('Backing up %s. No previous backup found' %
-                            db_instance['DBInstanceIdentifier'])
+                logger.info('Backing up %s. No previous backup found' % db_instance['DBInstanceIdentifier'])
 
-            snapshot_identifier = '%s-%s' % (
-                db_instance['DBInstanceIdentifier'], timestamp_format)
+            snapshot_identifier = '%s-%s' % (db_instance['DBInstanceIdentifier'], timestamp_format)
+
+            tags = [{'Key': 'created_by', 'Value': 'Snapshot Tool for RDS'},
+                    {'Key': 'created_on', 'Value': timestamp_format},
+                    {'Key': 'share_snapshot', 'Value': 'True'}]
+
+            # If the instance is encrypted, check to see if we need to reencrypt due to the default KMS key
+            if db_instance['StorageEncrypted']:
+                if db_instance['KmsKeyId'] == 'arn:aws:kms:us-east-1:363687077708:key/fd418f2d-8475-4395-abab-14374d801853':
+                    tags.append({'Key': 'requires_reencryption', 'Value': 'False'})
+                else:
+                    tags.append({'Key': 'requires_reencryption', 'Value': 'True'})
 
             try:
-                response = client.create_db_snapshot(
+                client.create_db_snapshot(
                     DBSnapshotIdentifier=snapshot_identifier,
                     DBInstanceIdentifier=db_instance['DBInstanceIdentifier'],
-                    Tags=[{'Key': 'CreatedBy', 'Value': 'Snapshot Tool for RDS'}, {
-                        'Key': 'CreatedOn', 'Value': timestamp_format}, {'Key': 'shareAndCopy', 'Value': 'YES'}]
+                    Tags=tags
                 )
-            except Exception:
-                pending_backups += 1
-        else:
 
-            backup_age = get_latest_snapshot_ts(
-                db_instance['DBInstanceIdentifier'],
-                filtered_snapshots)
+            except Exception as e:
+                pending_backups += 1
+                logger.error(e)
+        else:
+            backup_age = get_latest_snapshot_ts(db_instance['DBInstanceIdentifier'], filtered_snapshots)
 
             logger.info('Skipped %s. Does not require backup. Backed up %s minutes ago' % (
                 db_instance['DBInstanceIdentifier'], (now - backup_age).total_seconds() / 60))

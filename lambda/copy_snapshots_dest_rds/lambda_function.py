@@ -53,7 +53,7 @@ def lambda_handler(event, context):
     for shared_identifier, shared_attributes in shared_snapshots.items():
 
         if shared_identifier not in own_snapshots.keys() and shared_identifier not in own_dest_snapshots.keys():
-        # Check date
+            # Check date
             creation_date = get_timestamp(shared_identifier, shared_snapshots)
             if creation_date:
                 time_difference = datetime.now() - creation_date
@@ -80,7 +80,6 @@ def lambda_handler(event, context):
 
             else:
                 logger.info('Not copying %s locally. No valid timestamp' % shared_identifier)
-
 
         # Copy to DESTINATION_REGION
         elif shared_identifier not in own_dest_snapshots.keys() and shared_identifier in own_snapshots.keys() and REGION != DESTINATION_REGION:

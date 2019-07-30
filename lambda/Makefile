@@ -16,11 +16,11 @@
 
 # Override S3 destination by changing this variable or setting it in the
 # environment
-S3DEST?=[YOUR BUCKET HERE]
+S3DEST?=at-lambda-code-archive
 
 # Set these if, for example, you use profiles on the AWS command line
 # or if your 'aws' executable is in a weird place.
-AWSARGS=--region [YOUR REGION] --profile [YOUR PROFILE, or 'default', or remove this]
+AWSARGS=--region us-east-1 --profile non-production
 AWSCMD=aws
 ZIPCMD=zip
 
@@ -29,7 +29,7 @@ ZIPCMD=zip
 
 # if you define "._foo" as a file on this line, then it will zip up a
 # folder called foo, adding a standard file into it to make foo.zip.
-all:	._copy_snapshots_dest_rds \
+all: ._copy_snapshots_dest_rds \
 	._copy_snapshots_no_x_account_rds \
 	._delete_old_snapshots_dest_rds \
 	._delete_old_snapshots_no_x_account_rds \

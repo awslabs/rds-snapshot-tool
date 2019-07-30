@@ -8,8 +8,8 @@ The Snapshot Tool for RDS automates the task of creating manual snapshots, copyi
 ## Getting Started
 
 To deploy on your accounts, you will need to use the Cloudformation templates provided.
-* Deploy `snapshot_tool_rds_source.json` in the source account (the account that runs the RDS instances)
-* Deploy `snapshot_tool_rds_dest.json` in the destination account (the account where you'd like to keep your snapshots)
+* Deploy `snapshot_tool_rds_source.yaml` in the source account (the account that runs the RDS instances)
+* Deploy `snapshot_tool_rds_dest.yaml` in the destination account (the account where you'd like to keep your snapshots)
 
 
 ### Source Account
@@ -22,7 +22,7 @@ The following components will be created in the source account:
 * A Cloudformation stack containing all these resources
 
 #### Installing in the source account
-Run snapshot_tool_RDS_source.json on the Cloudformation console.
+Run snapshot_tool_RDS_source.yaml on the Cloudformation console.
 You wil need to specify the different parameters. The default values will back up all RDS instances in the region at 1AM UTC, once a day.
 If your instances are encrypted, you will need to provide access to the KMS Key to the destination account. You can read more on how to do that here: https://aws.amazon.com/premiumsupport/knowledge-center/share-cmk-account/
 
@@ -52,7 +52,7 @@ The following components will be created in the destination account:
 * 2 Cloudwatch Alarms and associated SNS Topics to alert on State Machines failures
 * A Cloudformation stack containing all these resources
 
-On your destination account, you will need to run snapshot_tool_RDS_dest.json on the Cloudformation. As before, you will need to run it in a region where Step Functions is available.
+On your destination account, you will need to run snapshot_tool_RDS_dest.yaml on the Cloudformation. As before, you will need to run it in a region where Step Functions is available.
 The following parameters are available:
 
 * **DestinationRegion** - the region where you want your snapshots to be copied. If you set it to the same as the source region, the snapshots will be copied from the source account but will be kept in the source region. This is useful if you would like to keep a copy of your snapshots in a different account but would prefer not to copy them to a different region.
@@ -71,15 +71,15 @@ There are two sets of Lambda Step Functions that take regular snapshots and copy
 
 A CloudWatch Event is scheduled to trigger Lambda Step Function State Machine named `stateMachineTakeSnapshotsRDS`. That state machine invokes a function named `lambdaTakeSnapshotsRDS`. That function triggers a snapshot and applies some standard tags. It matches RDS instances using a regular expression on their names. 
 
-There are two other state machines and lambda functions. The `statemachineShareSnapshotsRDS` looks for new snapshots created by the `lambdaTakeSnapshotsRDS` function. When it finds them, it shares them with the destination account. This state machine is, by default, run every 10 minutes. (To change it, you need to change the `ScheduleExpression` property of the `cwEventShareSnapshotsRDS` resource in `snapshots_tool_rds_source.json`). If it finds a new snapshot that is intended to be shared, it shares the snapshot.
+There are two other state machines and lambda functions. The `statemachineShareSnapshotsRDS` looks for new snapshots created by the `lambdaTakeSnapshotsRDS` function. When it finds them, it shares them with the destination account. This state machine is, by default, run every 10 minutes. (To change it, you need to change the `ScheduleExpression` property of the `cwEventShareSnapshotsRDS` resource in `snapshots_tool_rds_source.yaml`). If it finds a new snapshot that is intended to be shared, it shares the snapshot.
 
-The other state machine is the `statemachineDeleteOldSnapshotsRDS` and it calls `lambdaDeleteOldSnapshotsRDS` to delete snapshots according to the `RetentionDays` parameter when the stack is launched. This state machine is, by default, run once each hour. (To change it, you need to change the `ScheduleExpression` property of the `cwEventDeleteOldSnapshotsRDS` resource in `snapshots_tool_rds_source.json`). If it finds a snapshot that is older than the retention time, it deletes the snapshot.
+The other state machine is the `statemachineDeleteOldSnapshotsRDS` and it calls `lambdaDeleteOldSnapshotsRDS` to delete snapshots according to the `RetentionDays` parameter when the stack is launched. This state machine is, by default, run once each hour. (To change it, you need to change the `ScheduleExpression` property of the `cwEventDeleteOldSnapshotsRDS` resource in `snapshots_tool_rds_source.yaml`). If it finds a snapshot that is older than the retention time, it deletes the snapshot.
 
 ### In the Destination Account
 
-There are two state machines and corresponding lambda functions. The `statemachineCopySnapshotsDestRDS` looks for new snapshots that have been shared but have not yet been copied. When it finds them, it creates a copy in the destination account, encrypted with the KMS key that has been stipulated. This state machine is, by default, run every 10 minutes. (To change it, you need to change the `ScheduleExpression` property of the `cwEventCopySnapshotsRDS` resource in `snapshots_tool_rds_dest.json`).
+There are two state machines and corresponding lambda functions. The `statemachineCopySnapshotsDestRDS` looks for new snapshots that have been shared but have not yet been copied. When it finds them, it creates a copy in the destination account, encrypted with the KMS key that has been stipulated. This state machine is, by default, run every 10 minutes. (To change it, you need to change the `ScheduleExpression` property of the `cwEventCopySnapshotsRDS` resource in `snapshots_tool_rds_dest.yaml`).
 
-The other state machine is just like the corresponding state machine and function in the source account. The state machine is `statemachineDeleteOldSnapshotsRDS` and it calls `lambdaDeleteOldSnapshotsRDS` to delete snapshots according to the `RetentionDays` parameter when the stack is launched. This state machine is, by default, run once each hour. (To change it, you need to change the `ScheduleExpression` property of the `cwEventDeleteOldSnapshotsRDS` resource in `snapshots_tool_rds_source.json`). If it finds a snapshot that is older than the retention time, it deletes the snapshot.
+The other state machine is just like the corresponding state machine and function in the source account. The state machine is `statemachineDeleteOldSnapshotsRDS` and it calls `lambdaDeleteOldSnapshotsRDS` to delete snapshots according to the `RetentionDays` parameter when the stack is launched. This state machine is, by default, run once each hour. (To change it, you need to change the `ScheduleExpression` property of the `cwEventDeleteOldSnapshotsRDS` resource in `snapshots_tool_rds_source.yaml`). If it finds a snapshot that is older than the retention time, it deletes the snapshot.
 
 
 ## Building From Source and Deploying
