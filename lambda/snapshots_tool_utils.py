@@ -36,7 +36,7 @@ if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
 else:
     _REGION = os.getenv('AWS_DEFAULT_REGION')
 
-_SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-ee', 'postgres' ]
+_SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-se', 'oracle-se1', 'oracle-se2', 'oracle-ee', 'postgres' ]
 
 
 logger = logging.getLogger()
