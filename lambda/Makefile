@@ -39,6 +39,7 @@ all:	._copy_snapshots_dest_rds \
 
 clean:
 	rm -f ._*
+	rm -rf package/*
 
 ._%: %.zip
 	"$(AWSCMD)" $(AWSARGS) s3 cp "$<" "s3://$(S3DEST)" \
@@ -47,5 +48,10 @@ clean:
 
 # This rule is a BSD make style rule that says "to make foo.zip, call
 # 'zip -jqr foo snapshot_tool_utils.py'"
-%.zip: %
+%.zip: %.install
 	$(ZIPCMD) -jqr "$@" "$<" snapshots_tool_utils.py
+	cd package; $(ZIPCMD) -r9 "../$@"  .
+
+%.install:
+	pip install --target ./package retry==0.9.1
+
