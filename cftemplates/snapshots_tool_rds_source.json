@@ -63,11 +63,11 @@
 			"Description": "Set to TRUE to filter instances that have tag CopyDBSnapshot set to True. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
 		},
-                "LogGroupName": {
-                        "Type": "String",
-                        "Default": "lambdaDeleteOldSnapshotsRDS-source",
-                        "Description": "Name for RDS snapshot log group."
-                }
+		"LogGroupName": {
+			"Type": "String",
+			"Default": "lambdaDeleteOldSnapshotsRDS-source",
+			"Description": "Name for RDS snapshot log group."
+		}
 	},
 	"Conditions": {
 		"Share": {
