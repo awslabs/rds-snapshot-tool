@@ -57,11 +57,11 @@
 			"Default": "TRUE",
 			"Description": "Enable copying snapshots across accounts. Set to FALSE if your source snapshosts are not on a different account"
 		},
-                "LogGroupName": {
-                        "Type": "String",
-                        "Default": "lambdaDeleteOldSnapshotsRDS-dest",
-                        "Description": "Name for RDS snapshot log group."
-                }
+		"LogGroupName": {
+			"Type": "String",
+			"Default": "lambdaDeleteOldSnapshotsRDS-dest",
+			"Description": "Name for RDS snapshot log group."
+		}
 	},
 	"Conditions": {
 		"DefaultBucket": {
