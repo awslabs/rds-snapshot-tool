@@ -57,6 +57,12 @@
 			"Description": "Set to TRUE to enable deletion of snapshot based on RetentionDays. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
 		},
+		"UseAutomatedBackup": {
+			"Type": "String",
+			"Default": "TRUE",
+			"Description": "Set to TRUE to create backups from automated backups by copying them first. Else set it to FALSE to create out of running instance",
+			"AllowedValues": ["TRUE", "FALSE"]
+		},
 		"TaggedInstance": {
 			"Type": "String",
 			"Default": "FALSE",
@@ -298,7 +304,8 @@
 									"rds:DescribeDBSnapshots",
 									"rds:ModifyDBSnapshotAttribute",
 									"rds:DescribeDBSnapshotAttributes",
-									"rds:ListTagsForResource"
+									"rds:ListTagsForResource",
+									"rds:CopyDBSnapshot"
 								],
 								"Resource": "*"
 							}]
@@ -341,6 +348,9 @@
 						},
 						"TAGGEDINSTANCE": {
 							"Ref": "TaggedInstance"
+						},
+						"USE_AUTOMATED_BACKUP": {
+							"Ref": "UseAutomatedBackup"
 						}
 					}
 				},
