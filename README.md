@@ -56,6 +56,7 @@ Here is a break down of each parameter for the source template:
 
 * **CodeBucket** - this parameter specifies the bucket where the code for the Lambda functions is located. The Lambda function code is located in the ```lambda``` directory in zip format. These files need to be on the **root* of the bucket or the CloudFormation templates will fail. Please follow the instructions to build source (earlier on this README file)
 * **DeleteOldSnapshots** - Set to TRUE to enable functionality that will delete snapshots after **RetentionDays**. Set to FALSE if you want to disable this functionality completely. (Associated Lambda and State Machine resources will not be created in the account). **WARNING** If you decide to enable this functionality later on, bear in mind it will delete **all snapshots**, older than **RetentionDays**, created by this tool; not just the ones created after **DeleteOldSnapshots** is set to TRUE.
+* **UseAutomatedBackup** - Set to TRUE to enable copying from automated backups, instead of from live database instance.
 * **TaggedInstance** - Set to TRUE to enable functionality that will only take snapshots for RDS Instances with tag CopyDBSnapshot set to True. The settings in InstanceNamePattern and TaggedInstance both need to evaluate successfully for a snapshot to be created (logical AND).
 
 ### Destination Account
