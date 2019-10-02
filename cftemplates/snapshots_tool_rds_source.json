@@ -152,7 +152,7 @@
 				"EvaluationPeriods": "1",
 				"MetricName": "ExecutionsFailed",
 				"Namespace": "AWS/States",
-				"Period": "300",
+				"Period": "3600",
 				"Statistic": "Sum",
 				"Threshold": "1.0",
 				"AlarmActions": [{
