@@ -13,7 +13,7 @@ or in the "license" file accompanying this file. This file is distributed on an 
 # Support module for the Snapshot Tool for RDS
 
 import boto3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import logging
 import re
@@ -37,6 +37,8 @@ else:
     _REGION = os.getenv('AWS_DEFAULT_REGION')
 
 _SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-se', 'oracle-se1', 'oracle-se2', 'oracle-ee', 'postgres' ]
+
+_AUTOMATED_BACKUP_LIST = []
 
 
 logger = logging.getLogger()
@@ -362,3 +364,93 @@ def copy_remote(snapshot_identifier, snapshot_object):
             CopyTags = True)
 
     return response
+
+
+def get_all_automated_snapshots(client):
+    global _AUTOMATED_BACKUP_LIST
+    if len(_AUTOMATED_BACKUP_LIST) == 0:
+        response = paginate_api_call(
+            client, 'describe_db_snapshots', 'DBSnapshots', SnapshotType='automated'
+        )
+        _AUTOMATED_BACKUP_LIST = response['DBSnapshots']
+
+    return _AUTOMATED_BACKUP_LIST
+
+
+def copy_or_create_db_snapshot(
+    client,
+    db_instance,
+    snapshot_identifier,
+    snapshot_tags,
+    use_automated_backup=True,
+    backup_interval=24,
+):
+
+    if use_automated_backup is False:
+        logger.info(
+            'creating snapshot out of a running db instance: %s'
+            % db_instance['DBInstanceIdentifier']
+        )
+        snapshot_tags.append(
+            {
+                'Key': 'DBInstanceIdentifier',
+                'Value': db_instance['DBInstanceIdentifier'],
+            }
+        )
+        return client.create_db_snapshot(
+            DBSnapshotIdentifier=snapshot_identifier,
+            DBInstanceIdentifier=db_instance['DBInstanceIdentifier'],
+            Tags=snapshot_tags,
+        )
+
+    # Find the latest automted backup and Copy snapshot out of it
+    all_automated_snapshots = get_all_automated_snapshots(client)
+    db_automated_snapshots = [x for x in all_automated_snapshots
+                              if x['DBInstanceIdentifier'] == db_instance['DBInstanceIdentifier']]
+
+    # Raise exception if no automated backup found
+    if len(db_automated_snapshots) <= 0:
+        log_message = (
+            'No automated snapshots found for db: %s'
+            % db_instance['DBInstanceIdentifier']
+        )
+        logger.error(log_message)
+        raise SnapshotToolException(log_message)
+
+    # filter last automated backup
+    db_automated_snapshots.sort(key=lambda x: x['SnapshotCreateTime'])
+    latest_snapshot = db_automated_snapshots[-1]
+
+    # Make sure automated backup is not more than backup_interval window old
+    backup_age = datetime.now(timezone.utc) - latest_snapshot['SnapshotCreateTime']
+    if backup_age.total_seconds() >= (backup_interval * 60 * 60):
+        now = datetime.now()
+        log_message = (
+            'Last automated backup was %s minutes ago. No latest automated backup available. '
+            % ((now - backup_age).total_seconds() / 60)
+        )
+        logger.warn(log_message)
+
+        # If last automated backup is over 2*backup_interval, then raise error
+        if backup_age.total_seconds() >= (backup_interval * 2 * 60 * 60):
+            logger.error(log_message)
+            raise SnapshotToolException(log_message)
+
+    logger.info(
+        'Creating snapshot out of an automated backup: %s'
+        % latest_snapshot['DBSnapshotIdentifier']
+    )
+    snapshot_tags.append(
+        {
+            'Key': 'SourceDBSnapshotIdentifier',
+            'Value': latest_snapshot['DBSnapshotIdentifier'],
+        }
+    )
+
+    return client.copy_db_snapshot(
+        SourceDBSnapshotIdentifier=latest_snapshot['DBSnapshotIdentifier'],
+        TargetDBSnapshotIdentifier=snapshot_identifier,
+        Tags=snapshot_tags,
+        CopyTags=False,
+    )
+

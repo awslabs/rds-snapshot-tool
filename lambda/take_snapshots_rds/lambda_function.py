@@ -27,6 +27,7 @@ LOGLEVEL = os.getenv('LOG_LEVEL').strip()
 BACKUP_INTERVAL = int(os.getenv('INTERVAL', '24'))
 PATTERN = os.getenv('PATTERN', 'ALL_INSTANCES')
 TAGGEDINSTANCE = os.getenv('TAGGEDINSTANCE', 'FALSE')
+USE_AUTOMATED_BACKUP = os.getenv('USE_AUTOMATED_BACKUP', 'TRUE')
 
 if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
     REGION = os.getenv('REGION_OVERRIDE').strip()
@@ -68,13 +69,21 @@ def lambda_handler(event, context):
 
             snapshot_identifier = '%s-%s' % (
                 db_instance['DBInstanceIdentifier'], timestamp_format)
+            
+            snapshot_tags = [
+                {'Key': 'CreatedBy', 'Value': 'Snapshot Tool for RDS'},
+                {'Key': 'CreatedOn', 'Value': timestamp_format},
+                {'Key': 'shareAndCopy', 'Value': 'YES'},
+            ]
 
             try:
-                response = client.create_db_snapshot(
-                    DBSnapshotIdentifier=snapshot_identifier,
-                    DBInstanceIdentifier=db_instance['DBInstanceIdentifier'],
-                    Tags=[{'Key': 'CreatedBy', 'Value': 'Snapshot Tool for RDS'}, {
-                        'Key': 'CreatedOn', 'Value': timestamp_format}, {'Key': 'shareAndCopy', 'Value': 'YES'}]
+                response = copy_or_create_db_snapshot(
+                    client,
+                    db_instance,
+                    snapshot_identifier,
+                    snapshot_tags,
+                    use_automated_backup=USE_AUTOMATED_BACKUP,
+                    backup_interval = BACKUP_INTERVAL
                 )
             except Exception as e:
                 pending_backups += 1
