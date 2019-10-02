@@ -55,11 +55,6 @@
 			"AllowedValues": ["TRUE", "FALSE"],
 			"Default": "TRUE",
 			"Description": "Enable copying snapshots across accounts. Set to FALSE if your source snapshosts are not on a different account"
-		},
-		"LogGroupName": {
-			"Type": "String",
-			"Default": "lambdaDeleteOldSnapshotsRDS-dest",
-			"Description": "Name for RDS snapshot log group."
 		}
 	},
 	"Conditions": {
@@ -541,15 +536,15 @@
 				}]
 			}
 		},
-		"cwloggroupDeleteOldSnapshotsDestRDS":{
+		"cwloggrouplambdaDeleteOldDestRDS":{
 			"Type": "AWS::Logs::LogGroup",
-			"Description": "Log group for the lambdaCopySnapshotsRDS function's logs",
+			"Description": "Log group for the lambdaDeleteOldDestRDS function's logs",
 			"Condition": "DeleteOld",
 			"DependsOn": "lambdaDeleteOldDestRDS",
 			"Properties": {
-				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
-				"LogGroupName": { 
-					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "LogGroupName" } } ]
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" },
+				"LogGroupName": {
+					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaDeleteOldDestRDS" } } ]
 				}
 			}
 		},
@@ -558,8 +553,8 @@
 			"Description": "Log group for the lambdaCopySnapshotsRDS function's logs",
 			"DependsOn": "lambdaCopySnapshotsRDS",
 			"Properties": {
-				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
-				"LogGroupName": { 
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" },
+				"LogGroupName": {
 					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaCopySnapshotsRDS" } } ]
 				}
 			}
