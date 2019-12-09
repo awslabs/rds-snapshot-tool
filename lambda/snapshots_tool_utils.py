@@ -34,7 +34,7 @@ _TIMESTAMP_FORMAT = '%Y-%m-%d-%H-%M'
 if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
     _REGION = os.getenv('REGION_OVERRIDE').strip()
 else:
-    _REGION = os.getenv('AWS_DEFAULT_REGION')
+    _REGION = os.getenv('AWS_DEFAULT_REGION','eu-west-1')
 
 _SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-se', 'oracle-se1', 'oracle-se2', 'oracle-ee', 'postgres' ]
 
@@ -46,6 +46,23 @@ logger.setLevel(_LOGLEVEL.upper())
 class SnapshotToolException(Exception):
     pass
 
+
+def get_kms_type(kmskeyid,REGION):
+
+    keys = re.findall(r'([^\/]+$)',kmskeyid)
+    client = boto3.client('kms', region_name=REGION)
+    
+    for key in keys:
+        response = client.describe_key(
+            KeyId=key
+        )
+    #print(response)
+    tipo = response['KeyMetadata']['KeyManager']
+    
+    if tipo != 'AWS':
+        return False
+    else:
+        return True
 
 def search_tag_copydbsnapshot(response):
 # Takes a list_tags_for_resource response and searches for our CopyDBSnapshot tag
