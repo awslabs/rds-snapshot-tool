@@ -57,9 +57,9 @@ def get_kms_type(kmskeyid,REGION):
             KeyId=key
         )
     #print(response)
-    tipo = response['KeyMetadata']['KeyManager']
+    kms_owner = response['KeyMetadata']['KeyManager']
     
-    if tipo != 'AWS':
+    if kms_owner != 'AWS':
         return False
     else:
         return True
