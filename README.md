@@ -8,8 +8,8 @@ The Snapshot Tool for RDS automates the task of creating manual snapshots, copyi
 ## Getting Started
 
 To deploy on your accounts, you will need to use the Cloudformation templates provided.
-* Deploy `snapshot_tool_rds_source.json` in the source account (the account that runs the RDS instances)
-* Deploy `snapshot_tool_rds_dest.json` in the destination account (the account where you'd like to keep your snapshots)
+* Deploy `snapshot_tool_rds_source.yml` in the source account (the account that runs the RDS instances)
+* Deploy `snapshot_tool_rds_dest.yml` in the destination account (the account where you'd like to keep your snapshots)
 
 
 ### Source Account
