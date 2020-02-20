@@ -34,7 +34,7 @@ _TIMESTAMP_FORMAT = '%Y-%m-%d-%H-%M'
 if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
     _REGION = os.getenv('REGION_OVERRIDE').strip()
 else:
-    _REGION = os.getenv('AWS_DEFAULT_REGION','eu-west-1')
+    _REGION = os.getenv('AWS_DEFAULT_REGION')
 
 _SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-se', 'oracle-se1', 'oracle-se2', 'oracle-ee', 'postgres' ]
 

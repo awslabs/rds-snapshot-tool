@@ -21,15 +21,15 @@ from snapshots_tool_utils import *
 
 
 # Initialize from environment variable
-LOGLEVEL = os.getenv('LOG_LEVEL', 'INFO').strip()
-DEST_ACCOUNTID = str(os.getenv('DEST_ACCOUNT','000000000000')).strip()
+LOGLEVEL = os.getenv('LOG_LEVEL', 'ERROR').strip()
+DEST_ACCOUNTID = str(os.getenv('DEST_ACCOUNT')).strip()
 PATTERN = os.getenv('PATTERN', 'ALL_INSTANCES')
 
 if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
     REGION = os.getenv('REGION_OVERRIDE').strip()
 else:
     REGION = os.getenv('AWS_DEFAULT_REGION')
-BACKUP_KMS = os.getenv('BACKUP_KMS','arn:aws:kms:eu-west-1:500154599841:key/bf4df85d-5c43-4e76-b171-74f5b820de9e')
+BACKUP_KMS = os.getenv('BACKUP_KMS')
 
 SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-se', 'oracle-se1', 'oracle-se2', 'oracle-ee', 'postgres' ]
 
