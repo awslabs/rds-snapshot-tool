@@ -123,6 +123,12 @@
 			},
 			"ap-southeast-1": {
 				"Bucket": "snapshots-tool-rds-ap-southeast-1-real"
+			},
+			"cn-north-1": {
+				"Bucket": "snapshots-tool-rds-cn-north-1"
+			},
+			"cn-northwest-1": {
+				"Bucket": "snapshots-tool-rds-cn-northwest-1"
 			}
 		}
 	},
@@ -281,7 +287,7 @@
 									"logs:CreateLogStream",
 									"logs:PutLogEvents"
 								],
-								"Resource": "arn:aws:logs:*:*:*"
+								"Resource": { "Fn::Sub": "arn:${AWS::Partition}:logs:*:*:*" }
 							}]
 						}
 					},
