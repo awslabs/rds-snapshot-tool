@@ -1,6 +1,18 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
 	"Parameters": {
+		"DeleteOldFailedTopic": {
+			"Type": "String",
+			"Default": ""
+		},
+		"ShareFailedTopic": {
+			"Type": "String",
+			"Default": ""
+		},
+		"BackupsFailedTopic": {
+			"Type": "String",
+			"Default": ""
+		},
 		"CodeBucket": {
 			"Type": "String",
 			"Default": "DEFAULT_BUCKET",
@@ -70,15 +82,54 @@
 		}
 	},
 	"Conditions": {
+		"CreateBackupsFailedTopic": {
+			"Fn::Equals": [{
+				"Ref": "BackupsFailedTopic"
+			}, ""]
+		},
+		"CreateDeleteOldFailedTopic": {
+			"Fn::Equals": [{
+				"Ref": "DeleteOldFailedTopic"
+			}, ""]
+		},
+		"DeleteOldFailedTopic": {
+			"Fn::And": [{
+				"Condition": "DeleteOld"
+			}, {
+				"Condition": "CreateDeleteOldFailedTopic"
+			}]
+		},
+		"CreateShareFailedTopic": {
+			"Fn::Equals": [{
+				"Ref": "ShareFailedTopic"
+			}, ""]
+		},
 		"Share": {
 			"Fn::Equals": [{
 				"Ref": "ShareSnapshots"
 			}, "TRUE"]
 		},
+		"OutputShareTopic": {
+			"Fn::And": [{
+				"Condition": "Share"
+			},
+			{
+				"Condition": "CreateShareFailedTopic"
+			}]
+		},
 		"DeleteOld": {
 			"Fn::Equals": [{
 				"Ref": "DeleteOldSnapshots"
 			}, "TRUE"]
+		},
+		"CreateTopicPolicy": {
+			"Fn::Or": [{
+				"Condition": "CreateBackupsFailedTopic"
+			}, {
+				"Condition": "CreateDeleteOldFailedTopic"
+			}, {
+				"Condition": "DeleteOldFailedTopic"
+			}]
 		},
 		"DefaultBucket": {
 			"Fn::Equals": [{
@@ -129,34 +180,48 @@
 	"Resources": {
 		"topicBackupsFailed": {
 			"Type": "AWS::SNS::Topic",
+			"Condition": "CreateBackupsFailedTopic",
 			"Properties": {
 				"DisplayName": "backups_failed_rds"
 			}
 		},
 		"topicShareFailed": {
 			"Type": "AWS::SNS::Topic",
+			"Condition": "CreateShareFailedTopic",
 			"Properties": {
 				"DisplayName": "share_failed_rds"
 			}
 		},
 		"topicDeleteOldFailed": {
 			"Type": "AWS::SNS::Topic",
+			"Condition": "CreateDeleteOldFailedTopic",
 			"Properties": {
 				"DisplayName": "delete_old_failed_rds"
 			}
 		},
 		"snspolicySnapshotsRDS": {
 			"Type": "AWS::SNS::TopicPolicy",
+			"Condition": "CreateTopicPolicy",
 			"Properties": {
 				"Topics": [{
+					"Fn::If": ["CreateBackupsFailedTopic", {
 						"Ref": "topicBackupsFailed"
-					},
-					{
+					}, {
+						"Ref": "AWS::NoValue"
+					}]
+				}, {
+					"Fn::If": ["CreateShareFailedTopic", {
 						"Ref": "topicShareFailed"
 					}, {
+						"Ref": "AWS::NoValue"
+					}]
+				}, {
+					"Fn::If": ["CreateDeleteOldFailedTopic", {
 						"Ref": "topicDeleteOldFailed"
-					}
-				],
+					}, {
+						"Ref": "AWS::NoValue"
+					}]
+				}],
 				"PolicyDocument": {
 					"Version": "2008-10-17",
 					"Id": "__default_policy_ID",
@@ -201,7 +266,11 @@
 				"Statistic": "Sum",
 				"Threshold": "1.0",
 				"AlarmActions": [{
-					"Ref": "topicBackupsFailed"
+					"Fn::If": ["CreateBackupsFailedTopic", {
+						"Ref": "topicBackupsFailed"
+					}, {
+						"Ref": "BackupsFailedTopic"
+					}]
 				}],
 				"Dimensions": [{
 					"Name": "StateMachineArn",
@@ -224,7 +293,11 @@
 				"Statistic": "Sum",
 				"Threshold": "2.0",
 				"AlarmActions": [{
-					"Ref": "topicShareFailed"
+					"Fn::If": ["CreateShareFailedTopic", {
+						"Ref": "topicShareFailed"
+					}, {
+						"Ref": "ShareFailedTopic"
+					}]
 				}],
 				"Dimensions": [{
 					"Name": "StateMachineArn",
@@ -247,7 +320,11 @@
 				"Statistic": "Sum",
 				"Threshold": "2.0",
 				"AlarmActions": [{
-					"Ref": "topicDeleteOldFailed"
+					"Fn::If": ["CreateDeleteOldFailedTopic", {
+						"Ref": "topicDeleteOldFailed"
+					}, {
+						"Ref": "DeleteOldFailedTopic"
+					}]
 				}],
 				"Dimensions": [{
 					"Name": "StateMachineArn",
@@ -743,20 +820,21 @@
 	},
 	"Outputs": {
 		"BackupFailedTopic": {
+			"Condition": "CreateBackupsFailedTopic",
 			"Description": "Subscribe to this topic to receive alerts of failed backups",
 			"Value": {
 				"Ref": "topicBackupsFailed"
 			}
 		},
 		"ShareFailedTopic": {
-			"Condition": "Share",
+			"Condition": "OutputShareTopic",
 			"Description": "Subscribe to this topic to receive alerts of failures at sharing snapshots with destination account",
 			"Value": {
 				"Ref": "topicShareFailed"
 			}
 		},
 		"DeleteOldFailedTopic": {
-			"Condition": "DeleteOld",
+			"Condition": "CreateDeleteOldFailedTopic",
 			"Description": "Subscribe to this topic to receive alerts of failures at deleting old snapshots",
 			"Value": {
 				"Ref": "topicDeleteOldFailed"
