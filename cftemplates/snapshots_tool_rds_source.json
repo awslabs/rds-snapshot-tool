@@ -28,7 +28,7 @@
 			"Default": "24",
 			"Description": "Interval for backups in hours. Default is 24"
 		},
-		"DestinationAccount": {
+		"DestinationAccounts": {
 			"Type": "String",
 			"Default": "000000000000",
 			"Description": "Destination account with no dashes. Comma delimited"
@@ -447,11 +447,11 @@
 					"S3Key": "share_snapshots_rds.zip"
 				},
 				"MemorySize" : 512,
-				"Description": "This function shares snapshots created by the take_snapshots_rds function with DEST_ACCOUNT specified in the environment variables. ",
+				"Description": "This function shares snapshots created by the take_snapshots_rds function with DEST_ACCOUNTS specified in the environment variables. ",
 				"Environment": {
 					"Variables": {
-						"DEST_ACCOUNT": {
-							"Ref": "DestinationAccount"
+						"DEST_ACCOUNTS": {
+							"Ref": "DestinationAccounts"
 						},
 						"LOG_LEVEL": {
 							"Ref": "LogLevel"
@@ -602,7 +602,7 @@
 				"DefinitionString": {
 					"Fn::Join": ["", [{
 							"Fn::Join": ["\n", [
-								" {\"Comment\":\"Shares snapshots with DEST_ACCOUNT\",",
+								" {\"Comment\":\"Shares snapshots with DEST_ACCOUNTS\",",
 								" \"StartAt\":\"ShareSnapshots\",",
 								" \"States\":{",
 								"   \"ShareSnapshots\":{",
