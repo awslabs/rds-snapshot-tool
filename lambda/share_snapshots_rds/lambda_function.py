@@ -50,18 +50,19 @@ def lambda_handler(event, context):
             ResourceName=snapshot_arn)
 
         if snapshot_object['Status'].lower() == 'available' and search_tag_shared(response_tags):
-            try:
-                # Share snapshot with dest_account
-                response_modify = client.modify_db_snapshot_attribute(
-                    DBSnapshotIdentifier=snapshot_identifier,
-                    AttributeName='restore',
-                    ValuesToAdd=[
-                        DEST_ACCOUNTID
-                    ]
-                )
-            except Exception as e:
-                logger.error('Exception sharing %s (%s)' % (snapshot_identifier, e))
-                pending_snapshots += 1
+            for account_id in DEST_ACCOUNTID.split(","):
+                try:
+                    # Share snapshot with dest_account
+                    response_modify = client.modify_db_snapshot_attribute(
+                        DBSnapshotIdentifier=snapshot_identifier,
+                        AttributeName='restore',
+                        ValuesToAdd=[
+                            account_id
+                        ]
+                    )
+                except Exception as e:
+                    logger.error('Exception sharing %s (%s)' % (snapshot_identifier, e))
+                    pending_snapshots += 1
 
     if pending_snapshots > 0:
         log_message = 'Could not share all snapshots. Pending: %s' % pending_snapshots
