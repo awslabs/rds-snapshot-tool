@@ -1,6 +1,14 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
 	"Parameters": {
+		"DeleteOldFailedTopic": {
+			"Type": "String",
+			"Default": ""
+		},
+		"CopyFailedTopic": {
+			"Type": "String",
+			"Default": ""
+		},
 		"CodeBucket": {
 			"Type": "String",
 			"Default": "DEFAULT_BUCKET",
@@ -64,6 +72,30 @@
 		}
 	},
 	"Conditions": {
+		"CreateDeleteOldFailedTopic": {
+			"Fn::Equals": [{
+					"Ref": "DeleteOldFailedTopic"
+				}, ""]
+		},
+		"CreateCopyFailedTopic": {
+			"Fn::Equals": [{
+					"Ref": "CopyFailedTopic"
+				}, ""]
+		},
+		"CreateTopicPolicy": {
+			"Fn::Or": [{
+					"Condition": "CreateDeleteOldFailedTopic"
+				}, {
+					"Condition": "CreateCopyFailedTopic"
+				}]
+		},
+		"OutputDeleteOldFailedTopic": {
+			"Fn::And": [{
+					"Condition": "DeleteOld"
+				}, {
+					"Condition": "CreateDeleteOldFailedTopic"
+				}]
+		},
 		"DefaultBucket": {
 			"Fn::Equals": [{
 				"Ref": "CodeBucket"
@@ -122,12 +154,14 @@
 	},
 	"Resources": {
 		"topicCopyFailedDest": {
+			"Condition": "CreateCopyFailedTopic",
 			"Type": "AWS::SNS::Topic",
 			"Properties": {
 				"DisplayName": "copies_failed_dest_rds"
 			}
 		},
 		"topicDeleteOldFailedDest": {
+			"Condition": "CreateDeleteOldFailedTopic",
 			"Type": "AWS::SNS::Topic",
 			"Properties": {
 				"DisplayName": "delete_old_failed_dest_rds"
@@ -137,9 +171,17 @@
 			"Type": "AWS::SNS::TopicPolicy",
 			"Properties": {
 				"Topics": [{
-					"Ref": "topicCopyFailedDest"
+					"Fn::If": ["CreateCopyFailedTopic", {
+						"Ref": "topicCopyFailedDest"
+					}, {
+						"Ref": "AWS::NoValue"
+					}]
 				}, {
-					"Ref": "topicDeleteOldFailedDest"
+					"Fn::If": ["CreateDeleteOldFailedTopic", {
+						"Ref": "topicDeleteOldFailedDest"
+					}, {
+						"Ref": "AWS::NoValue"
+					}]
 				}],
 				"PolicyDocument": {
 					"Version": "2008-10-17",
@@ -185,7 +227,11 @@
 				"Statistic": "Sum",
 				"Threshold": "1.0",
 				"AlarmActions": [{
-					"Ref": "topicCopyFailedDest"
+					"Fn::If": ["CreateCopyFailedTopic", {
+						"Ref": "topicCopyFailedDest"
+					}, {
+						"Ref": "CopyFailedTopic"
+					}]
 				}],
 				"Dimensions": [{
 					"Name": "StateMachineArn",
@@ -208,7 +254,11 @@
 				"Statistic": "Sum",
 				"Threshold": "2.0",
 				"AlarmActions": [{
-					"Ref": "topicDeleteOldFailedDest"
+					"Fn::If": ["CreateDeleteOldFailedTopic", {
+						"Ref": "topicDeleteOldFailedDest"
+					}, {
+						"Ref": "DeleteOldFailedTopic"
+					}]
 				}],
 				"Dimensions": [{
 					"Name": "StateMachineArn",
@@ -625,13 +675,14 @@
 	},
 	"Outputs": {
 		"CopyFailedTopic": {
+			"Condition": "CreateCopyFailedTopic",
 			"Description": "Subscribe to this topic to receive alerts of failed copies",
 			"Value": {
 				"Ref": "topicCopyFailedDest"
 			}
 		},
 		"DeleteOldFailedTopic": {
-			"Condition": "DeleteOld",
+			"Condition": "OutputDeleteOldFailedTopic",
 			"Description": "Subscribe to this topic to receive alerts of failures at deleting old snapshots",
 			"Value": {
 				"Ref": "topicDeleteOldFailedDest"
