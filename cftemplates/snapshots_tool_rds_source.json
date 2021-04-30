@@ -115,6 +115,9 @@
 			"eu-west-2": {
 				"Bucket": "snapshots-tool-rds-eu-west-2"
 			},
+			"eu-north-1": {
+				"Bucket": "snapshots-tool-rds-eu-north-1"
+			},
 			"us-west-1": {
 				"Bucket": "snapshots-tool-rds-us-west-1"
 			},
