@@ -7,6 +7,22 @@ The Snapshot Tool for RDS automates the task of creating manual snapshots, copyi
 
 ## Getting Started
 
+
+### Building From Source and Deploying
+
+You will need to build from source and deploy to your own bucket in your own account. To build, you need to be on a unix-like system (e.g., macOS or some flavour of Linux) and you need to have `make` and `zip`.
+
+1. Create an S3 bucket to hold the Lambda function zip files. The bucket must be in the same region where the Lambda functions will run. And the Lambda functions must run in the same region as the RDS instances.
+
+1. Clone the repository
+
+1. Edit the `Makefile` file and set `S3DEST` to be the bucket name where you want the functions to go. Set the `AWSARGS`, `AWSCMD` and `ZIPCMD` variables as well.
+
+1. Type `make` at the command line. It will call `zip` to make the zip files, and then it will call `aws s3 cp` to copy the zip files to the bucket you named.
+
+1. Be sure to use the correct bucket name in the `CodeBucket` parameter when launching the stack in both accounts.
+
+
 To deploy on your accounts, you will need to use the Cloudformation templates provided.
 * Deploy `snapshot_tool_rds_source.json` in the source account (the account that runs the RDS instances)
 * Deploy `snapshot_tool_rds_dest.json` in the destination account (the account where you'd like to keep your snapshots)
@@ -38,7 +54,7 @@ Here is a break down of each parameter for the source template:
 * **SourceRegionOverride** - if you are running RDS on a region where Step Functions is not available, this parameter will allow you to override the source region. For example, at the time of this writing, you may be running RDS in Northern California (us-west-1) and would like to copy your snapshots to Montreal (ca-central-1). Neither region supports Step Functions at the time of this writing so deploying this tool there will not work. The solution is to run this template in a region that supports Step Functions (such as North Virginia or Ohio) and set **SourceRegionOverride** to *us-west-1*.
 **IMPORTANT**: deploy to the closest regions for best results.
 
-* **CodeBucket** - this parameter specifies the bucket where the code for the Lambda functions is located. Leave to DEFAULT_BUCKET to download from an AWS-managed bucket. The Lambda function code is located in the ```lambda``` directory. These files need to be on the **root* of the bucket or the CloudFormation templates will fail.
+* **CodeBucket** - this parameter specifies the bucket where the code for the Lambda functions is located. The Lambda function code is located in the ```lambda``` directory in zip format. These files need to be on the **root* of the bucket or the CloudFormation templates will fail. Please follow the instructions to build source (earlier on this README file)
 * **DeleteOldSnapshots** - Set to TRUE to enable functionality that will delete snapshots after **RetentionDays**. Set to FALSE if you want to disable this functionality completely. (Associated Lambda and State Machine resources will not be created in the account). **WARNING** If you decide to enable this functionality later on, bear in mind it will delete **all snapshots**, older than **RetentionDays**, created by this tool; not just the ones created after **DeleteOldSnapshots** is set to TRUE.
 * **TaggedInstance** - Set to TRUE to enable functionality that will only take snapshots for RDS Instances with tag CopyDBSnapshot set to True. The settings in InstanceNamePattern and TaggedInstance both need to evaluate successfully for a snapshot to be created (logical AND).
 
@@ -80,20 +96,6 @@ There are two state machines and corresponding lambda functions. The `statemachi
 
 The other state machine is just like the corresponding state machine and function in the source account. The state machine is `statemachineDeleteOldSnapshotsRDS` and it calls `lambdaDeleteOldSnapshotsRDS` to delete snapshots according to the `RetentionDays` parameter when the stack is launched. This state machine is, by default, run once each hour. (To change it, you need to change the `ScheduleExpression` property of the `cwEventDeleteOldSnapshotsRDS` resource in `snapshots_tool_rds_source.json`). If it finds a snapshot that is older than the retention time, it deletes the snapshot.
 
-
-## Building From Source and Deploying
-
-As published, these CloudFormation templates will pull the zip files for the Lambda functions from an AWS-owned and operated S3 bucket. You can also choose to build from source and deploy to your own bucket in your own account. To build, you need to be on a unix-like system (e.g., macOS or some flavour of Linux) and you need to have `make` and `zip`.
-
-1. Create an S3 bucket to hold the Lambda function zip files. The bucket must be in the same region where the Lambda functions will run. And the Lambda functions must run in the same region as the RDS instances. 
-
-1. Clone the repository
-
-1. Edit the `Makefile` file and set `S3DEST` to be the bucket name where you want the functions to go. Set the `AWSARGS`, `AWSCMD` and `ZIPCMD` variables as well.
-
-1. Type `make` at the command line. It will call `zip` to make the zip files, and then it will call `aws s3 cp` to copy the zip files to the bucket you named.
-
-1. Be sure to use the correct bucket name in the `CodeBucket` parameter when launching the stack in both accounts.
 
 ## Updating
 

@@ -3,8 +3,7 @@
 	"Parameters": {
 		"CodeBucket": {
 			"Type": "String",
-			"Default": "DEFAULT_BUCKET",
-			"Description": "Name of the bucket that contains the lambda functions to deploy. Leave the default value to download the code from the AWS Managed buckets"
+			"Description": "Name of the bucket that contains the lambda functions to deploy."
 		},
 		"SnapshotPattern": {
 			"Type": "String",
@@ -64,11 +63,6 @@
 		}
 	},
 	"Conditions": {
-		"DefaultBucket": {
-			"Fn::Equals": [{
-				"Ref": "CodeBucket"
-			}, "DEFAULT_BUCKET"]
-		},
 		"DeleteOld": {
 			"Fn::Equals": [{
 				"Ref": "DeleteOldSnapshots"
@@ -78,46 +72,6 @@
 			"Fn::Equals": [{
 				"Ref": "CrossAccountCopy"
 			}, "TRUE" ]
-		}
-	},
-	"Mappings": {
-		"Buckets": {
-			"us-east-1": {
-				"Bucket": "snapshots-tool-rds-us-east-1"
-			},
-			"us-west-2": {
-				"Bucket": "snapshots-tool-rds-us-west-2"
-			},
-			"us-east-2": {
-				"Bucket": "snapshots-tool-rds-us-east-2"
-			},
-			"ap-southeast-2": {
-				"Bucket": "snapshots-tool-rds-ap-southeast-2"
-			},
-			"ap-northeast-1": {
-				"Bucket": "snapshots-tool-rds-ap-northeast-1"
-			},
-			"eu-west-1": {
-				"Bucket": "snapshots-tool-rds-eu-west-1"
-			},
-			"eu-central-1": {
-				"Bucket": "snapshots-tool-rds-eu-central-1"
-			},
-			"ca-central-1": {
-				"Bucket": "snapshots-tool-rds-ca-central-1"
-			},
-			"eu-west-2": {
-				"Bucket": "snapshots-tool-rds-eu-west-2"
-			},
-			"us-west-1": {
-				"Bucket": "snapshots-tool-rds-us-west-1"
-			},
-			"ap-northeast-2": {
-				"Bucket": "snapshots-tool-rds-ap-northeast-2"
-			},
-			"ap-southeast-1": {
-				"Bucket": "snapshots-tool-rds-ap-southeast-1-real"
-			}
 		}
 	},
 	"Resources": {
@@ -314,13 +268,7 @@
 			"Properties": {
 				"Code": {
 					"S3Bucket": {
-						"Fn::If": ["DefaultBucket", {
-							"Fn::FindInMap": ["Buckets", {
-								"Ref": "AWS::Region"
-							}, "Bucket"]
-						}, {
 							"Ref": "CodeBucket"
-						}]
 					},
 					"S3Key": { "Fn::If" : [ "CrossAccount", "copy_snapshots_dest_rds.zip", "copy_snapshots_no_x_account_rds.zip" ]}
 				},
@@ -365,13 +313,7 @@
 			"Properties": {
 				"Code": {
 					"S3Bucket": {
-						"Fn::If": ["DefaultBucket", {
-							"Fn::FindInMap": ["Buckets", {
-								"Ref": "AWS::Region"
-							}, "Bucket"]
-						}, {
 							"Ref": "CodeBucket"
-						}]
 					},
 					"S3Key": {"Fn::If" : [ "CrossAccount", "delete_old_snapshots_dest_rds.zip", "delete_old_snapshots_no_x_account_rds.zip" ]}
 				},
