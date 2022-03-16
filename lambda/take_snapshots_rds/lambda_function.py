@@ -49,7 +49,6 @@ def lambda_handler(event, context):
     filtered_snapshots = get_own_snapshots_source(PATTERN, paginate_api_call(client, 'describe_db_snapshots', 'DBSnapshots'), BACKUP_INTERVAL)
 
     for db_instance in filtered_instances:
-
         timestamp_format = now.strftime(TIMESTAMP_FORMAT)
 
         if requires_backup(BACKUP_INTERVAL, db_instance, filtered_snapshots):

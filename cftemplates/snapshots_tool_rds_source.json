@@ -50,6 +50,12 @@
 			"Default": "NO",
 			"Description": "Set to the region where your RDS instances run, only if such region does not support Step Functions. Leave as NO otherwise"
 		},
+		"BackupKmsArn": {
+			"Type": "String",
+			"Default": "NO",
+			"AllowedPattern": "arn:aws:kms:*",
+			"Description": "Set ARN of kms key to copy snapshot with shared key (remember, destination account should be access it)"
+		},
 		"DeleteOldSnapshots": {
 			"Type": "String",
 			"Default": "TRUE",
@@ -290,7 +296,10 @@
 						},
 						"TAGGEDINSTANCE": {
 							"Ref": "TaggedInstance"
-						}
+						},
+						"BACKUP_KMS":{
+							"Ref": "BackupKmsArn"
+						}	
 					}
 				},
 				"Role": {

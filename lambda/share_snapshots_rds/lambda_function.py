@@ -29,6 +29,7 @@ if os.getenv('REGION_OVERRIDE', 'NO') != 'NO':
     REGION = os.getenv('REGION_OVERRIDE').strip()
 else:
     REGION = os.getenv('AWS_DEFAULT_REGION')
+BACKUP_KMS = os.getenv('BACKUP_KMS')
 
 SUPPORTED_ENGINES = [ 'mariadb', 'sqlserver-se', 'sqlserver-ee', 'sqlserver-ex', 'sqlserver-web', 'mysql', 'oracle-se', 'oracle-se1', 'oracle-se2', 'oracle-ee', 'postgres' ]
 
@@ -38,6 +39,7 @@ logger.setLevel(LOGLEVEL.upper())
 
 
 def lambda_handler(event, context):
+    now = datetime.now()
     pending_snapshots = 0
     client = boto3.client('rds', region_name=REGION)
     response = paginate_api_call(client, 'describe_db_snapshots', 'DBSnapshots', SnapshotType='manual')
@@ -50,8 +52,51 @@ def lambda_handler(event, context):
             ResourceName=snapshot_arn)
 
         if snapshot_object['Status'].lower() == 'available' and search_tag_shared(response_tags):
+            
+            snapshot_info = client.describe_db_snapshots(
+                DBSnapshotIdentifier=snapshot_arn
+            )
+            timestamp_format = now.strftime('%Y-%m-%d-%H-%M')
+            targetSnapshot = snapshot_info['DBSnapshots'][0]['DBInstanceIdentifier'] + '-' + timestamp_format
+            logger.info('snapshot_info:{}'.format(snapshot_info))
+            
+            if snapshot_info['DBSnapshots'][0]['Encrypted'] == True:
+                kms = get_kms_type(snapshot_info['DBSnapshots'][0]['KmsKeyId'],REGION)
+            else:
+                kms = False
+                
+           
+            logger.info('Checking Snapshot: {}'.format(snapshot_identifier))
+            
+            
+            if kms is True and BACKUP_KMS is not '':
+                try:
+                    copy_status = client.copy_db_snapshot(
+                    SourceDBSnapshotIdentifier=snapshot_arn,
+                    TargetDBSnapshotIdentifier=targetSnapshot,
+                    KmsKeyId=BACKUP_KMS,
+                    CopyTags=True
+                )
+                    pass
+                except Exception as e:
+                    logger.error('Exception copy {}: {}'.format(snapshot_arn, e))
+                    pending_snapshots += 1
+                    pass
+                else:
+                    modify_status = client.add_tags_to_resource(
+                    ResourceName=snapshot_arn,
+                    Tags=[
+                        {
+                            'Key': 'shareAndCopy',
+                            'Value': 'No'
+                        }
+                        ]
+                        )
+                    
+            
             try:
                 # Share snapshot with dest_account
+                logger.info('Sharing snapshot: {}'.format(snapshot_identifier))
                 response_modify = client.modify_db_snapshot_attribute(
                     DBSnapshotIdentifier=snapshot_identifier,
                     AttributeName='restore',

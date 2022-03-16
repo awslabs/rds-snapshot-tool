@@ -47,6 +47,23 @@ class SnapshotToolException(Exception):
     pass
 
 
+def get_kms_type(kmskeyid,REGION):
+
+    keys = re.findall(r'([^\/]+$)',kmskeyid)
+    client = boto3.client('kms', region_name=REGION)
+    
+    for key in keys:
+        response = client.describe_key(
+            KeyId=key
+        )
+    #print(response)
+    kms_owner = response['KeyMetadata']['KeyManager']
+    
+    if kms_owner != 'AWS':
+        return False
+    else:
+        return True
+
 def search_tag_copydbsnapshot(response):
 # Takes a list_tags_for_resource response and searches for our CopyDBSnapshot tag
     try:
