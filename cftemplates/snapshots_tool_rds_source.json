@@ -56,16 +56,22 @@
 			"Description": "Set to TRUE to enable deletion of snapshot based on RetentionDays. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
 		},
+		"UseAutomatedBackup": {
+			"Type": "String",
+			"Default": "TRUE",
+			"Description": "Set to TRUE to create backups from automated backups by copying them first. Else set it to FALSE to create out of running instance",
+			"AllowedValues": ["TRUE", "FALSE"]
+		},
 		"TaggedInstance": {
 			"Type": "String",
 			"Default": "FALSE",
 			"Description": "Set to TRUE to filter instances that have tag CopyDBSnapshot set to True. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
 		},
-		"LogGroupName": {
+		"KmsKeySource": {
 			"Type": "String",
-			"Default": "lambdaDeleteOldSnapshotsRDS-source",
-			"Description": "Name for RDS snapshot log group."
+			"Default": "None",
+			"Description": "Set to the ARN for the KMS key in the SOURCE region to re-encrypt encrypted snapshots. Leave None if you are not using encryption"
 		}
 	},
 	"Conditions": {
@@ -151,7 +157,7 @@
 				"EvaluationPeriods": "1",
 				"MetricName": "ExecutionsFailed",
 				"Namespace": "AWS/States",
-				"Period": "300",
+				"Period": "3600",
 				"Statistic": "Sum",
 				"Threshold": "1.0",
 				"AlarmActions": [{
@@ -253,7 +259,8 @@
 									"rds:ModifyDBSnapshotAttribute",
 									"rds:DescribeDBSnapshotAttributes",
 									"rds:ListTagsForResource",
-									"rds:AddTagsToResource"
+									"rds:AddTagsToResource",
+									"rds:CopyDBSnapshot"
 								],
 								"Resource": "*"
 							}]
@@ -290,6 +297,12 @@
 						},
 						"TAGGEDINSTANCE": {
 							"Ref": "TaggedInstance"
+						},
+						"USE_AUTOMATED_BACKUP": {
+							"Ref": "UseAutomatedBackup"
+						},
+						"KMS_KEY_SOURCE_REGION": {
+							"Ref": "KmsKeySource"
 						}
 					}
 				},
@@ -648,8 +661,8 @@
 			"Description": "Log group for the lambdaTakeSnapshotsRDS function's logs",
 			"DependsOn": "lambdaTakeSnapshotsRDS",
 			"Properties": {
-				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
-				"LogGroupName": { 
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" },
+				"LogGroupName": {
 					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaTakeSnapshotsRDS" } } ]
 				}
 			}
@@ -660,8 +673,8 @@
 			"Description": "Log group for the lambdaShareSnapshotsRDS function's logs",
 			"DependsOn": "lambdaShareSnapshotsRDS",
 			"Properties": {
-				"RetentionInDays": { "Ref": "LambdaCWLogRetention" }, 
-				"LogGroupName": { 
+				"RetentionInDays": { "Ref": "LambdaCWLogRetention" },
+				"LogGroupName": {
 					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaShareSnapshotsRDS" } } ]
 				}
 			}
@@ -669,10 +682,11 @@
 		"cwloggrouplambdaDeleteOldSnapshotsRDS":{
 			"Type": "AWS::Logs::LogGroup",
 			"Description": "Log group for the lambdaDeleteOldSnapshotsRDS function's logs",
+			"DependsOn": "lambdaDeleteOldSnapshotsRDS",
 			"Properties": {
 				"RetentionInDays": { "Ref": "LambdaCWLogRetention" },
-				"LogGroupName": { 
-					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "LogGroupName" } } ]
+				"LogGroupName": {
+					"Fn::Sub": [ "/aws/lambda/${func}", { "func": {	"Ref" : "lambdaDeleteOldSnapshotsRDS" } } ]
 				}
 			}
 		}
