@@ -67,6 +67,11 @@
 			"Default": "FALSE",
 			"Description": "Set to TRUE to filter instances that have tag CopyDBSnapshot set to True. Set to FALSE to disable",
 			"AllowedValues": ["TRUE", "FALSE"]
+		},
+		"KmsKeySource": {
+			"Type": "String",
+			"Default": "None",
+			"Description": "Set to the ARN for the KMS key in the SOURCE region to re-encrypt encrypted snapshots. Leave None if you are not using encryption"
 		}
 	},
 	"Conditions": {
@@ -295,6 +300,9 @@
 						},
 						"USE_AUTOMATED_BACKUP": {
 							"Ref": "UseAutomatedBackup"
+						},
+						"KMS_KEY_SOURCE_REGION": {
+							"Ref": "KmsKeySource"
 						}
 					}
 				},

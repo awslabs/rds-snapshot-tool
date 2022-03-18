@@ -205,7 +205,7 @@ def get_own_snapshots_source(pattern, response, backup_interval=None):
     filtered = {}
 
     for snapshot in response['DBSnapshots']:
-        
+
         # No need to consider snapshots that are still in progress
         if 'SnapshotCreateTime' not in snapshot:
             continue
@@ -341,8 +341,6 @@ def copy_local(snapshot_identifier, snapshot_object):
 
     return response
 
-
-
 def copy_remote(snapshot_identifier, snapshot_object):
     client = boto3.client('rds', region_name=_DESTINATION_REGION)
 
@@ -447,10 +445,20 @@ def copy_or_create_db_snapshot(
         }
     )
 
-    return client.copy_db_snapshot(
-        SourceDBSnapshotIdentifier=latest_snapshot['DBSnapshotIdentifier'],
-        TargetDBSnapshotIdentifier=snapshot_identifier,
-        Tags=snapshot_tags,
-        CopyTags=False,
-    )
+    if latest_snapshot['Encrypted']:
+        logger.info('Copying encrypted snapshot %s locally' % snapshot_identifier)
+        response = client.copy_db_snapshot(
+            SourceDBSnapshotIdentifier = latest_snapshot['DBSnapshotArn'],
+            TargetDBSnapshotIdentifier = snapshot_identifier,
+            KmsKeyId = _KMS_KEY_SOURCE_REGION,
+            Tags = snapshot_tags)
 
+    else:
+        logger.info('Copying snapshot %s locally' %snapshot_identifier)
+        response = client.copy_db_snapshot(
+            SourceDBSnapshotIdentifier = latest_snapshot['DBSnapshotArn'],
+            TargetDBSnapshotIdentifier = snapshot_identifier,
+            Tags = snapshot_tags)
+
+
+    return response
