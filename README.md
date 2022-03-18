@@ -40,7 +40,7 @@ The following components will be created in the source account:
 #### Installing in the source account
 Run snapshot_tool_RDS_source.json on the Cloudformation console.
 You wil need to specify the different parameters. The default values will back up all RDS instances in the region at 1AM UTC, once a day.
-If your instances are encrypted, you will need to provide access to the KMS Key to the destination account. You can read more on how to do that here: https://aws.amazon.com/premiumsupport/knowledge-center/share-cmk-account/
+If your instances are encrypted, you will need to provide access to the KMS Key to the destination account and lambda execution role. You can read more on how to do that here: https://aws.amazon.com/premiumsupport/knowledge-center/share-cmk-account/
 
 Here is a break down of each parameter for the source template:
 
@@ -57,6 +57,7 @@ Here is a break down of each parameter for the source template:
 * **CodeBucket** - this parameter specifies the bucket where the code for the Lambda functions is located. The Lambda function code is located in the ```lambda``` directory in zip format. These files need to be on the **root* of the bucket or the CloudFormation templates will fail. Please follow the instructions to build source (earlier on this README file)
 * **DeleteOldSnapshots** - Set to TRUE to enable functionality that will delete snapshots after **RetentionDays**. Set to FALSE if you want to disable this functionality completely. (Associated Lambda and State Machine resources will not be created in the account). **WARNING** If you decide to enable this functionality later on, bear in mind it will delete **all snapshots**, older than **RetentionDays**, created by this tool; not just the ones created after **DeleteOldSnapshots** is set to TRUE.
 * **UseAutomatedBackup** - Set to TRUE to enable copying from automated backups, instead of from live database instance.
+* **KmsKeySource** - KMS Key to be used for re-encrypting snapshots during the copy, if `UseAutomatedBackup` is enabled. You also need to provide access to the KMS Key to the lambda execution role
 * **TaggedInstance** - Set to TRUE to enable functionality that will only take snapshots for RDS Instances with tag CopyDBSnapshot set to True. The settings in InstanceNamePattern and TaggedInstance both need to evaluate successfully for a snapshot to be created (logical AND).
 
 ### Destination Account
@@ -85,7 +86,7 @@ There are two sets of Lambda Step Functions that take regular snapshots and copy
 
 ### In the Source Account
 
-A CloudWatch Event is scheduled to trigger Lambda Step Function State Machine named `stateMachineTakeSnapshotsRDS`. That state machine invokes a function named `lambdaTakeSnapshotsRDS`. That function triggers a snapshot and applies some standard tags. It matches RDS instances using a regular expression on their names. 
+A CloudWatch Event is scheduled to trigger Lambda Step Function State Machine named `stateMachineTakeSnapshotsRDS`. That state machine invokes a function named `lambdaTakeSnapshotsRDS`. That function triggers a snapshot and applies some standard tags. It matches RDS instances using a regular expression on their names.
 
 There are two other state machines and lambda functions. The `statemachineShareSnapshotsRDS` looks for new snapshots created by the `lambdaTakeSnapshotsRDS` function. When it finds them, it shares them with the destination account. This state machine is, by default, run every 10 minutes. (To change it, you need to change the `ScheduleExpression` property of the `cwEventShareSnapshotsRDS` resource in `snapshots_tool_rds_source.json`). If it finds a new snapshot that is intended to be shared, it shares the snapshot.
 
@@ -100,7 +101,7 @@ The other state machine is just like the corresponding state machine and functio
 
 ## Updating
 
-This tool is fundamentally stateless. The state is mainly in the tags on the snapshots themselves and the parameters to the CloudFormation stack. If you make changes to the parameters or make changes to the Lambda function code, it is best to delete the stack and then launch the stack again. 
+This tool is fundamentally stateless. The state is mainly in the tags on the snapshots themselves and the parameters to the CloudFormation stack. If you make changes to the parameters or make changes to the Lambda function code, it is best to delete the stack and then launch the stack again.
 
 ## Authors
 
