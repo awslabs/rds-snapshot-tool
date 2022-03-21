@@ -715,6 +715,12 @@
 		"SourceURL": {
 			"Description": "For more information and documentation, see the source repository at GitHub.",
 			"Value": "https://github.com/awslabs/rds-snapshot-tool"
+		},
+		"iamRoleSnapshotsRDS": {
+			"Description": "IAM role used by lambda to take RDS snapshots",
+			"Value": {
+				"Ref": "iamroleSnapshotsRDS"
+			}
 		}
 	},
 	"Description": "Snapshots Tool for RDS cross-region and cross-account (source account stack)"
