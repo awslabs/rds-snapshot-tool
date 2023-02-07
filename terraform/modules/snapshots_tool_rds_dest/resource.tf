@@ -228,10 +228,9 @@ resource "aws_iam_role_policy_attachment" "attachment" {
 }
 
 resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
-  code_signing_config_arn = {
-    S3Bucket = var.code_bucket
-    S3Key    = local.CrossAccount ? "copy_snapshots_dest_rds.zip" : "copy_snapshots_no_x_account_rds.zip"
-  }
+  s3_bucket = var.code_bucket
+  s3_key    = local.CrossAccount ? "copy_snapshots_dest_rds.zip" : "copy_snapshots_no_x_account_rds.zip"
+
   memory_size = 512
   description = "This functions copies snapshots for RDS Instances shared with this account. It checks for existing snapshots following the pattern specified in the environment variables with the following format: <dbInstanceIdentifier-identifier>-YYYY-MM-DD-HH-MM"
   environment {
@@ -245,18 +244,16 @@ resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
       RETENTION_DAYS        = var.retention_days
     }
   }
-  role    = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300
 }
 
-resource "aws_lambda_function" "lambda_delete_old_dest_rds" {
-  count = locals.DeleteOld ? 1 : 0
-  code_signing_config_arn = {
-    S3Bucket = var.code_bucket
-    S3Key    = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
-  }
+resource "aws_lambda_function" "delete_old_dest_rds" {
+  count       = locals.DeleteOld ? 1 : 0
+  s3_bucket   = var.code_bucket
+  s3_key      = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
   memory_size = 512
   description = "This function enforces retention on the snapshots shared with the destination account. "
   environment {
@@ -267,7 +264,7 @@ resource "aws_lambda_function" "lambda_delete_old_dest_rds" {
       LOG_LEVEL        = var.log_level
     }
   }
-  role    = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300
@@ -315,7 +312,7 @@ resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_dest_rds" {
   "States": {
     "DeleteOldDestRegion": {
       "Type": "Task",
-      "Resource": "${aws_lambda_function.lambda_delete_old_dest_rds.arn}",
+      "Resource": "${aws_lambda_function.delete_old_dest_rds.arn}",
       "Retry": [
         {
           "ErrorEquals": [
