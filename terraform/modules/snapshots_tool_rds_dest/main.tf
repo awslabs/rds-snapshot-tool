@@ -1,7 +1,3 @@
-locals {
-  DeleteOld    = var.delete_old_snapshots == "TRUE"
-  CrossAccount = var.cross_account_copy == "TRUE"
-}
 resource "aws_sns_topic" "topic_copy_failed_dest" {
   display_name = "copies_failed_dest_rds"
 }
@@ -10,10 +6,9 @@ resource "aws_sns_topic" "topic_delete_old_failed_dest" {
 }
 
 resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
-  // CF Property(Topics) = [
-  //   aws_sns_topic.topic_copy_failed_dest.id,
-  //   aws_sns_topic.topic_delete_old_failed_dest.id
-  // ]
+  count = 2
+  arn   = element(toset(aws_sns_topc.topic_copy_failed_dest.arn, aws_sns_topic.topic_delete_old_failed_dest.arn), count.index) // in tf there is not a cfn "topcs" attribute which allows a list. 
+
   policy = {
     Version = "2008-10-17"
     Id      = "__default_policy_ID"
