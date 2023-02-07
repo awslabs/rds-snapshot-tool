@@ -1,0 +1,496 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  CodeBucket:
+    Type: String
+    Description: Name of the bucket that contains the lambda functions to deploy.
+  SnapshotPattern:
+    Type: String
+    Default: ALL_SNAPSHOTS
+    Description: Python regex for matching instance names to backup. Use "ALL_SNAPSHOTS"
+      to back up every RDS instance in the region.
+  RetentionDays:
+    Type: Number
+    Default: '7'
+    Description: Number of days to keep snapshots in retention before deleting them
+  DestinationRegion:
+    Type: String
+    Description: Destination region for snapshots.
+  LogLevel:
+    Type: String
+    Default: ERROR
+    Description: Log level for Lambda functions (DEBUG, INFO, WARN, ERROR, CRITICAL
+      are valid values).
+  LambdaCWLogRetention:
+    Type: Number
+    Default: '7'
+    Description: Number of days to retain logs from the lambda functions in CloudWatch
+      Logs
+  SourceRegionOverride:
+    Type: String
+    Default: 'NO'
+    Description: Set to the region where your RDS instances run, only if such region
+      does not support Step Functions. Leave as NO otherwise
+  KmsKeyDestination:
+    Type: String
+    Default: None
+    Description: Set to the ARN for the KMS key in the destination region to re-encrypt
+      encrypted snapshots. Leave None if you are not using encryption
+  KmsKeySource:
+    Type: String
+    Default: None
+    Description: Set to the ARN for the KMS key in the SOURCE region to re-encrypt
+      encrypted snapshots. Leave None if you are not using encryption
+  DeleteOldSnapshots:
+    Type: String
+    Default: 'TRUE'
+    Description: Set to TRUE to enable deletion of snapshot based on RetentionDays.
+      Set to FALSE to disable
+    AllowedValues:
+    - 'TRUE'
+    - 'FALSE'
+  CrossAccountCopy:
+    Type: String
+    AllowedValues:
+    - 'TRUE'
+    - 'FALSE'
+    Default: 'TRUE'
+    Description: Enable copying snapshots across accounts. Set to FALSE if your source
+      snapshosts are not on a different account
+  LogGroupName:
+    Type: String
+    Default: lambdaDeleteOldSnapshotsRDS-dest
+    Description: Name for RDS snapshot log group.
+Conditions:
+  DeleteOld:
+    Fn::Equals:
+    - Ref: DeleteOldSnapshots
+    - 'TRUE'
+  CrossAccount:
+    Fn::Equals:
+    - Ref: CrossAccountCopy
+    - 'TRUE'
+Resources:
+  topicCopyFailedDest:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: copies_failed_dest_rds
+  topicDeleteOldFailedDest:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: delete_old_failed_dest_rds
+  snspolicyCopyFailedDest:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+      - Ref: topicCopyFailedDest
+      - Ref: topicDeleteOldFailedDest
+      PolicyDocument:
+        Version: '2008-10-17'
+        Id: __default_policy_ID
+        Statement:
+        - Sid: __default_statement_ID
+          Effect: Allow
+          Principal:
+            AWS: "*"
+          Action:
+          - SNS:GetTopicAttributes
+          - SNS:SetTopicAttributes
+          - SNS:AddPermission
+          - SNS:RemovePermission
+          - SNS:DeleteTopic
+          - SNS:Subscribe
+          - SNS:ListSubscriptionsByTopic
+          - SNS:Publish
+          - SNS:Receive
+          Resource: "*"
+          Condition:
+            StringEquals:
+              AWS:SourceOwner:
+                Ref: AWS::AccountId
+  alarmcwCopyFailedDest:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: 'true'
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '1'
+      MetricName: ExecutionsFailed
+      Namespace: AWS/States
+      Period: '300'
+      Statistic: Sum
+      Threshold: '1.0'
+      AlarmActions:
+      - Ref: topicCopyFailedDest
+      Dimensions:
+      - Name: StateMachineArn
+        Value:
+          Ref: statemachineCopySnapshotsDestRDS
+  alarmcwDeleteOldFailedDest:
+    Type: AWS::CloudWatch::Alarm
+    Condition: DeleteOld
+    Properties:
+      ActionsEnabled: 'true'
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: '2'
+      MetricName: ExecutionsFailed
+      Namespace: AWS/States
+      Period: '3600'
+      Statistic: Sum
+      Threshold: '2.0'
+      AlarmActions:
+      - Ref: topicDeleteOldFailedDest
+      Dimensions:
+      - Name: StateMachineArn
+        Value:
+          Ref: statemachineDeleteOldSnapshotsDestRDS
+  iamroleSnapshotsRDS:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: inline_policy_snapshots_rds_cw_logs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: inline_policy_snapshots_rds
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - rds:CreateDBSnapshot
+            - rds:DeleteDBSnapshot
+            - rds:DescribeDBInstances
+            - rds:DescribeDBSnapshots
+            - rds:ModifyDBSnapshotAttribute
+            - rds:DescribeDBSnapshotAttributes
+            - rds:CopyDBSnapshot
+            - rds:ListTagsForResource
+            - rds:AddTagsToResource
+            Resource: "*"
+      - PolicyName: inline_policy_snapshot_rds_kms_access
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: AllowUseOfTheKey
+            Effect: Allow
+            Action:
+            - kms:Encrypt
+            - kms:Decrypt
+            - kms:ReEncrypt*
+            - kms:GenerateDataKey*
+            - kms:DescribeKey
+            Resource:
+            - "*"
+          - Sid: AllowAttachmentOfPersistentResources
+            Effect: Allow
+            Action:
+            - kms:CreateGrant
+            - kms:ListGrants
+            - kms:RevokeGrant
+            Resource:
+            - "*"
+            Condition:
+              Bool:
+                kms:GrantIsForAWSResource: true
+  lambdaCopySnapshotsRDS:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Ref: CodeBucket
+        S3Key:
+          Fn::If:
+          - CrossAccount
+          - copy_snapshots_dest_rds.zip
+          - copy_snapshots_no_x_account_rds.zip
+      MemorySize: 512
+      Description: 'This functions copies snapshots for RDS Instances shared with
+        this account. It checks for existing snapshots following the pattern specified
+        in the environment variables with the following format: <dbInstanceIdentifier-identifier>-YYYY-MM-DD-HH-MM'
+      Environment:
+        Variables:
+          SNAPSHOT_PATTERN:
+            Ref: SnapshotPattern
+          DEST_REGION:
+            Ref: DestinationRegion
+          LOG_LEVEL:
+            Ref: LogLevel
+          REGION_OVERRIDE:
+            Ref: SourceRegionOverride
+          KMS_KEY_DEST_REGION:
+            Ref: KmsKeyDestination
+          KMS_KEY_SOURCE_REGION:
+            Ref: KmsKeySource
+          RETENTION_DAYS:
+            Ref: RetentionDays
+      Role:
+        Fn::GetAtt:
+        - iamroleSnapshotsRDS
+        - Arn
+      Runtime: python3.7
+      Handler: lambda_function.lambda_handler
+      Timeout: 300
+  lambdaDeleteOldDestRDS:
+    Type: AWS::Lambda::Function
+    Condition: DeleteOld
+    Properties:
+      Code:
+        S3Bucket:
+          Ref: CodeBucket
+        S3Key:
+          Fn::If:
+          - CrossAccount
+          - delete_old_snapshots_dest_rds.zip
+          - delete_old_snapshots_no_x_account_rds.zip
+      MemorySize: 512
+      Description: 'This function enforces retention on the snapshots shared with
+        the destination account. '
+      Environment:
+        Variables:
+          SNAPSHOT_PATTERN:
+            Ref: SnapshotPattern
+          DEST_REGION:
+            Ref: DestinationRegion
+          RETENTION_DAYS:
+            Ref: RetentionDays
+          LOG_LEVEL:
+            Ref: LogLevel
+      Role:
+        Fn::GetAtt:
+        - iamroleSnapshotsRDS
+        - Arn
+      Runtime: python3.7
+      Handler: lambda_function.lambda_handler
+      Timeout: 300
+  iamroleStateExecution:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              Fn::Join:
+              - ''
+              - - states.
+                - Ref: AWS::Region
+                - ".amazonaws.com"
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: inline_policy_rds_snapshot
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            Resource: "*"
+  statemachineCopySnapshotsDestRDS:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      DefinitionString:
+        Fn::Join:
+        - ''
+        - - Fn::Join:
+            - "\n"
+            - - ' {"Comment":"Copies snapshots locally and then to DEST_REGION",'
+              - ' "StartAt":"CopySnapshots",'
+              - ' "States":{'
+              - '   "CopySnapshots":{'
+              - '     "Type":"Task",'
+              - '     "Resource": '
+          - "\""
+          - Fn::GetAtt:
+            - lambdaCopySnapshotsRDS
+            - Arn
+          - |-
+            "
+            ,
+          - Fn::Join:
+            - "\n"
+            - - '     "Retry":['
+              - "       {"
+              - '       "ErrorEquals":[ '
+              - '         "SnapshotToolException"'
+              - "       ],"
+              - '       "IntervalSeconds":300,'
+              - '       "MaxAttempts":5,'
+              - '       "BackoffRate":1'
+              - "     },"
+              - "     {"
+              - '      "ErrorEquals":[ '
+              - '         "States.ALL"], '
+              - '         "IntervalSeconds": 30,'
+              - '         "MaxAttempts": 20,'
+              - '         "BackoffRate": 1'
+              - "     }"
+              - "    ],"
+              - '    "End": true '
+              - "   }"
+              - " }}"
+      RoleArn:
+        Fn::GetAtt:
+        - iamroleStateExecution
+        - Arn
+  statemachineDeleteOldSnapshotsDestRDS:
+    Type: AWS::StepFunctions::StateMachine
+    Condition: DeleteOld
+    Properties:
+      DefinitionString:
+        Fn::Join:
+        - ''
+        - - Fn::Join:
+            - "\n"
+            - - ' {"Comment":"DeleteOld for RDS snapshots in destination region",'
+              - ' "StartAt":"DeleteOldDestRegion",'
+              - ' "States":{'
+              - '   "DeleteOldDestRegion":{'
+              - '     "Type":"Task",'
+              - '     "Resource": '
+          - "\""
+          - Fn::GetAtt:
+            - lambdaDeleteOldDestRDS
+            - Arn
+          - |-
+            "
+            ,
+          - Fn::Join:
+            - "\n"
+            - - '     "Retry":['
+              - "       {"
+              - '       "ErrorEquals":[ '
+              - '         "SnapshotToolException"'
+              - "       ],"
+              - '       "IntervalSeconds":600,'
+              - '       "MaxAttempts":5,'
+              - '       "BackoffRate":1'
+              - "     },"
+              - "     {"
+              - '      "ErrorEquals":[ '
+              - '         "States.ALL"], '
+              - '         "IntervalSeconds": 30,'
+              - '         "MaxAttempts": 20,'
+              - '         "BackoffRate": 1'
+              - "    }"
+              - "    ],"
+              - '    "End": true '
+              - "   }"
+              - " }}"
+      RoleArn:
+        Fn::GetAtt:
+        - iamroleStateExecution
+        - Arn
+  iamroleStepInvocation:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: inline_policy_state_invocation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - states:StartExecution
+            Resource: "*"
+  cwEventCopySnapshotsRDS:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Triggers the RDS Copy state machine in the destination account
+      ScheduleExpression:
+        Fn::Join:
+        - ''
+        - - cron(
+          - "/30 * * * ? *"
+          - ")"
+      State: ENABLED
+      Targets:
+      - Arn:
+          Ref: statemachineCopySnapshotsDestRDS
+        Id: Target1
+        RoleArn:
+          Fn::GetAtt:
+          - iamroleStepInvocation
+          - Arn
+  cwEventDeleteOldSnapshotsRDS:
+    Type: AWS::Events::Rule
+    Condition: DeleteOld
+    Properties:
+      Description: Triggers the RDS DeleteOld state machine in the destination account
+      ScheduleExpression:
+        Fn::Join:
+        - ''
+        - - cron(
+          - 0 /1 * * ? *
+          - ")"
+      State: ENABLED
+      Targets:
+      - Arn:
+          Ref: statemachineDeleteOldSnapshotsDestRDS
+        Id: Target1
+        RoleArn:
+          Fn::GetAtt:
+          - iamroleStepInvocation
+          - Arn
+  cwloggroupDeleteOldSnapshotsDestRDS:
+    Type: AWS::Logs::LogGroup
+    Description: Log group for the lambdaCopySnapshotsRDS function's logs
+    Condition: DeleteOld
+    DependsOn: lambdaDeleteOldDestRDS
+    Properties:
+      RetentionInDays:
+        Ref: LambdaCWLogRetention
+      LogGroupName:
+        Fn::Sub:
+        - "/aws/lambda/${func}"
+        - func:
+            Ref: LogGroupName
+  cwloggrouplambdaCopySnapshotsRDS:
+    Type: AWS::Logs::LogGroup
+    Description: Log group for the lambdaCopySnapshotsRDS function's logs
+    DependsOn: lambdaCopySnapshotsRDS
+    Properties:
+      RetentionInDays:
+        Ref: LambdaCWLogRetention
+      LogGroupName:
+        Fn::Sub:
+        - "/aws/lambda/${func}"
+        - func:
+            Ref: lambdaCopySnapshotsRDS
+Outputs:
+  CopyFailedTopic:
+    Description: Subscribe to this topic to receive alerts of failed copies
+    Value:
+      Ref: topicCopyFailedDest
+  DeleteOldFailedTopic:
+    Condition: DeleteOld
+    Description: Subscribe to this topic to receive alerts of failures at deleting
+      old snapshots
+    Value:
+      Ref: topicDeleteOldFailedDest
+  SourceURL:
+    Description: For more information and documentation, see the source repository
+      at GitHub.
+    Value: https://github.com/awslabs/rds-snapshot-tool
+Description: Snapshots Tool for RDS cross-region and cross-account (destination account
+  stack)
