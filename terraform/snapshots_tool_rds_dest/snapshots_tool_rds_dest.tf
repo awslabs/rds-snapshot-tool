@@ -3,84 +3,12 @@ data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
 locals {
-  DeleteOld = var.delete_old_snapshots == "TRUE"
+  DeleteOld    = var.delete_old_snapshots == "TRUE"
   CrossAccount = var.cross_account_copy == "TRUE"
 }
-
-variable "code_bucket" {
-  description = "Name of the bucket that contains the lambda functions to deploy."
-  type = string
-}
-
-variable "snapshot_pattern" {
-  description = "Python regex for matching instance names to backup. Use "ALL_SNAPSHOTS" to back up every RDS instance in the region."
-  type = string
-  default = "ALL_SNAPSHOTS"
-}
-
-variable "retention_days" {
-  description = "Number of days to keep snapshots in retention before deleting them"
-  type = string
-  default = "7"
-}
-
-variable "destination_region" {
-  description = "Destination region for snapshots."
-  type = string
-}
-
-variable "log_level" {
-  description = "Log level for Lambda functions (DEBUG, INFO, WARN, ERROR, CRITICAL are valid values)."
-  type = string
-  default = "ERROR"
-}
-
-variable "lambda_cw_log_retention" {
-  description = "Number of days to retain logs from the lambda functions in CloudWatch Logs"
-  type = string
-  default = "7"
-}
-
-variable "source_region_override" {
-  description = "Set to the region where your RDS instances run, only if such region does not support Step Functions. Leave as NO otherwise"
-  type = string
-  default = "NO"
-}
-
-variable "kms_key_destination" {
-  description = "Set to the ARN for the KMS key in the destination region to re-encrypt encrypted snapshots. Leave None if you are not using encryption"
-  type = string
-  default = "None"
-}
-
-variable "kms_key_source" {
-  description = "Set to the ARN for the KMS key in the SOURCE region to re-encrypt encrypted snapshots. Leave None if you are not using encryption"
-  type = string
-  default = "None"
-}
-
-variable "delete_old_snapshots" {
-  description = "Set to TRUE to enable deletion of snapshot based on RetentionDays. Set to FALSE to disable"
-  type = string
-  default = "TRUE"
-}
-
-variable "cross_account_copy" {
-  description = "Enable copying snapshots across accounts. Set to FALSE if your source snapshosts are not on a different account"
-  type = string
-  default = "TRUE"
-}
-
-variable "log_group_name" {
-  description = "Name for RDS snapshot log group."
-  type = string
-  default = "lambdaDeleteOldSnapshotsRDS-dest"
-}
-
 resource "aws_sns_topic" "topic_copy_failed_dest" {
   display_name = "copies_failed_dest_rds"
 }
-
 resource "aws_sns_topic" "topic_delete_old_failed_dest" {
   display_name = "delete_old_failed_dest_rds"
 }
@@ -92,10 +20,10 @@ resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
   // ]
   policy = {
     Version = "2008-10-17"
-    Id = "__default_policy_ID"
+    Id      = "__default_policy_ID"
     Statement = [
       {
-        Sid = "__default_statement_ID"
+        Sid    = "__default_statement_ID"
         Effect = "Allow"
         Principal = {
           AWS = "*"
@@ -113,9 +41,9 @@ resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
         ]
         Resource = "*"
         Condition = {
-          StringEquals = {
-            AWS:SourceOwner = data.aws_caller_identity.current.account_id
-          }
+          test     = "StringEquals"
+          variable = "AWS:SourceOwner"
+          values   = [data.aws_caller_identity.current.account_id]
         }
       }
     ]
@@ -143,7 +71,7 @@ resource "aws_cloudwatch_composite_alarm" "alarmcw_copy_failed_dest" {
 }
 
 resource "aws_cloudwatch_composite_alarm" "alarmcw_delete_old_failed_dest" {
-  count = locals.DeleteOld ? 1 : 0
+  count           = locals.DeleteOld ? 1 : 0
   actions_enabled = "true"
   // CF Property(ComparisonOperator) = "GreaterThanOrEqualToThreshold"
   // CF Property(EvaluationPeriods) = "2"
@@ -223,7 +151,7 @@ resource "aws_iam_role" "iamrole_snapshots_rds" {
         Version = "2012-10-17"
         Statement = [
           {
-            Sid = "AllowUseOfTheKey"
+            Sid    = "AllowUseOfTheKey"
             Effect = "Allow"
             Action = [
               "kms:Encrypt",
@@ -237,7 +165,7 @@ resource "aws_iam_role" "iamrole_snapshots_rds" {
             ]
           },
           {
-            Sid = "AllowAttachmentOfPersistentResources"
+            Sid    = "AllowAttachmentOfPersistentResources"
             Effect = "Allow"
             Action = [
               "kms:CreateGrant",
@@ -248,9 +176,9 @@ resource "aws_iam_role" "iamrole_snapshots_rds" {
               "*"
             ]
             Condition = {
-              Bool = {
-                kms:GrantIsForAWSResource = True
-              }
+              test     = "Bool"
+              variable = "kms:GrantIsForAWSResource"
+              values   = ["True"]
             }
           }
         ]
@@ -262,22 +190,22 @@ resource "aws_iam_role" "iamrole_snapshots_rds" {
 resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
   code_signing_config_arn = {
     S3Bucket = var.code_bucket
-    S3Key = local.CrossAccount ? "copy_snapshots_dest_rds.zip" : "copy_snapshots_no_x_account_rds.zip"
+    S3Key    = local.CrossAccount ? "copy_snapshots_dest_rds.zip" : "copy_snapshots_no_x_account_rds.zip"
   }
   memory_size = 512
   description = "This functions copies snapshots for RDS Instances shared with this account. It checks for existing snapshots following the pattern specified in the environment variables with the following format: <dbInstanceIdentifier-identifier>-YYYY-MM-DD-HH-MM"
   environment {
     variables = {
-      SNAPSHOT_PATTERN = var.snapshot_pattern
-      DEST_REGION = var.destination_region
-      LOG_LEVEL = var.log_level
-      REGION_OVERRIDE = var.source_region_override
-      KMS_KEY_DEST_REGION = var.kms_key_destination
+      SNAPSHOT_PATTERN      = var.snapshot_pattern
+      DEST_REGION           = var.destination_region
+      LOG_LEVEL             = var.log_level
+      REGION_OVERRIDE       = var.source_region_override
+      KMS_KEY_DEST_REGION   = var.kms_key_destination
       KMS_KEY_SOURCE_REGION = var.kms_key_source
-      RETENTION_DAYS = var.retention_days
+      RETENTION_DAYS        = var.retention_days
     }
   }
-  role = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.iamrole_snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300
@@ -287,19 +215,19 @@ resource "aws_lambda_function" "lambda_delete_old_dest_rds" {
   count = locals.DeleteOld ? 1 : 0
   code_signing_config_arn = {
     S3Bucket = var.code_bucket
-    S3Key = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
+    S3Key    = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
   }
   memory_size = 512
   description = "This function enforces retention on the snapshots shared with the destination account. "
   environment {
     variables = {
       SNAPSHOT_PATTERN = var.snapshot_pattern
-      DEST_REGION = var.destination_region
-      RETENTION_DAYS = var.retention_days
-      LOG_LEVEL = var.log_level
+      DEST_REGION      = var.destination_region
+      RETENTION_DAYS   = var.retention_days
+      LOG_LEVEL        = var.log_level
     }
   }
-  role = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.iamrole_snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300
@@ -401,6 +329,12 @@ resource "aws_iot_topic_rule_destination" "cw_event_copy_snapshots_rds" {
 
 resource "aws_iot_topic_rule_destination" "cw_event_delete_old_snapshots_rds" {
   count = locals.DeleteOld ? 1 : 0
+  vpc_configuration {
+    role_arn        = ""
+    security_groups = ""
+    subnet_ids      = ""
+    vpc_id          = ""
+  }
   // CF Property(Description) = "Triggers the RDS DeleteOld state machine in the destination account"
   // CF Property(ScheduleExpression) = join("", ["cron(", "0 /1 * * ? *", ")"])
   // CF Property(State) = "ENABLED"
@@ -422,19 +356,4 @@ resource "aws_inspector_resource_group" "cwloggroup_delete_old_snapshots_dest_rd
 resource "aws_inspector_resource_group" "cwloggrouplambda_copy_snapshots_rds" {
   // CF Property(RetentionInDays) = var.lambda_cw_log_retention
   // CF Property(LogGroupName) = "/aws/lambda/${aws_lambda_function.lambda_copy_snapshots_rds.arn}"
-}
-
-output "copy_failed_topic" {
-  description = "Subscribe to this topic to receive alerts of failed copies"
-  value = aws_sns_topic.topic_copy_failed_dest.id
-}
-
-output "delete_old_failed_topic" {
-  description = "Subscribe to this topic to receive alerts of failures at deleting old snapshots"
-  value = aws_sns_topic.topic_delete_old_failed_dest.id
-}
-
-output "source_url" {
-  description = "For more information and documentation, see the source repository at GitHub."
-  value = "https://github.com/awslabs/rds-snapshot-tool"
 }
