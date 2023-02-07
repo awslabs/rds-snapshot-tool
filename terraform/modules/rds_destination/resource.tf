@@ -287,7 +287,7 @@ resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
 resource "aws_lambda_function" "delete_old_dest_rds" {
   function_name = "dest-snapshot-retention"
   description   = "This function enforces retention on the snapshots shared with the destination account. "
-  count         = locals.DeleteOld ? 1 : 0
+  count         = local.DeleteOld ? 1 : 0
   s3_bucket     = var.code_bucket
   s3_key        = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
   memory_size   = 512
@@ -348,7 +348,7 @@ resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_dest_rds" {
   "States": {
     "DeleteOldDestRegion": {
       "Type": "Task",
-      "Resource": "${aws_lambda_function.delete_old_dest_rds.arn}",
+      "Resource": "${aws_lambda_function.delete_old_dest_rds[*].arn}",
       "Retry": [
         {
           "ErrorEquals": [
