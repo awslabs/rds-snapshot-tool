@@ -367,7 +367,7 @@ EOF
 
 resource "aws_iam_role" "iamrole_step_invocation" {
   name = "invoke-state-machines"
-  assume_role_policy = {
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -378,11 +378,11 @@ resource "aws_iam_role" "iamrole_step_invocation" {
         Action = "sts:AssumeRole"
       }
     ]
-  }
+  })
   force_detach_policies = true
   inline_policy {
-    PolicyName = "inline_policy_state_invocation"
-    PolicyDocument = {
+    name = "inline_policy_state_invocation"
+    policy = jsonencode({
       Version = "2012-10-17"
       Statement = [
         {
@@ -393,7 +393,7 @@ resource "aws_iam_role" "iamrole_step_invocation" {
           Resource = "*"
         }
       ]
-    }
+    })
   }
 }
 
