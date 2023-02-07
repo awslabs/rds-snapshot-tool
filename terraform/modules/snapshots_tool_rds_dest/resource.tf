@@ -1,16 +1,16 @@
-resource "aws_sns_topic" "topic_copy_failed_dest" {
-  display_name = "copies_failed_dest_rds"
-}
-resource "aws_sns_topic" "topic_delete_old_failed_dest" {
-  display_name = "delete_old_failed_dest_rds"
+resource "aws_sns_topic" "this" {
+  for_each     = local.sns_topic_names
+  display_name = each.value
 }
 
-resource "aws_sns_topic_policy" "snspolicy_delete_failed_dest" {
-  arn = aws_sns_topic.topic_delete_old_failed_dest.arn // in tf there is not a cfn "topcs" attribute which allows a list. 
+resource "aws_sns_topic_policy" "this" {
+  for_each = aws_sns_topic.this
+
+  arn = each.value.arn
 
   policy = {
     Version = "2008-10-17"
-    Id      = "destination_rds_failed_snapshot_delete"
+    Id      = each.value.name
     Statement = [
       {
         Sid    = "sns-permissions"
@@ -39,6 +39,7 @@ resource "aws_sns_topic_policy" "snspolicy_delete_failed_dest" {
     ]
   }
 }
+
 
 
 resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
