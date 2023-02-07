@@ -3,7 +3,7 @@ module "test_dbs" {
 }
 
 module "snapshots_tool_rds_dest" {
-  source = "./modules/snapshots_tool_rds_dest"
+  source = "./modules/rds_destination"
 }
 
 
