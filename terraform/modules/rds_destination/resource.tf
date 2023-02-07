@@ -111,6 +111,7 @@ resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alarmcw_copy_failed_dest" {
+
   alarm_name          = "failed-rds-copy"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -121,7 +122,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_copy_failed_dest" {
   threshold           = "1.0"
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.statemachine_delete_old_snapshots_dest_rds.arn
+    StateMachineArn = aws_sfn_state_machine.statemachine_copy_old_snapshots_dest_rds[*].arn
   }
 
   alarm_description = "This metric monitors state machine failure for copying snapshots"
@@ -131,6 +132,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_copy_failed_dest" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alarmcw_delete_old_failed_dest" {
+  count               = local.DeleteOld ? 1 : 0
   alarm_name          = "failed-rds-delete-old-snapshot"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "2"
@@ -141,7 +143,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_delete_old_failed_dest" {
   threshold           = "2.0"
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.statemachine_copy_old_snapshots_dest_rds.arn
+    StateMachineArn = aws_sfn_state_machine.statemachine_delete_old_snapshots_dest_rds[*].arn
   }
 
   alarm_description = "This metric monitors state machine failure for deleting old snapshots"
@@ -285,9 +287,9 @@ resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
 }
 
 resource "aws_lambda_function" "delete_old_dest_rds" {
+  count         = local.DeleteOld ? 1 : 0
   function_name = "dest-snapshot-retention"
   description   = "This function enforces retention on the snapshots shared with the destination account. "
-  count         = local.DeleteOld ? 1 : 0
   s3_bucket     = var.code_bucket
   s3_key        = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
   memory_size   = 512
@@ -338,6 +340,7 @@ resource "aws_iam_role" "iamrole_state_execution" {
 }
 
 resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_dest_rds" {
+  count    = local.DeleteOld ? 1 : 0
   name     = "delete-old-snapshots-destination-rds"
   role_arn = aws_iam_role.iamrole_state_execution.arn
 
