@@ -380,7 +380,7 @@ resource "aws_iam_role" "iamrole_step_invocation" {
     ]
   }
   force_detach_policies = true
-  inlinline_policy {
+  inline_policy {
     PolicyName = "inline_policy_state_invocation"
     PolicyDocument = {
       Version = "2012-10-17"
