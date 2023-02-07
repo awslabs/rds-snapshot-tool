@@ -1,16 +1,16 @@
-resource "aws_sns_topic" "this" {
-  for_each     = local.sns_topic_names
-  display_name = each.value
+resource "aws_sns_topic" "copy_failed_dest" {
+  display_name = "copies_failed_dest_rds"
+}
+resource "aws_sns_topic" "delete_old_failed_dest" {
+  display_name = "delete_old_failed_dest_rds"
 }
 
-resource "aws_sns_topic_policy" "this" {
-  for_each = aws_sns_topic.this
+resource "aws_sns_topic_policy" "copy_failed_dest" {
+  arn = aws_sns_topic.copy_failed_dest.arn // in tf there is not a cfn "topcs" attribute which allows a list. 
 
-  arn = each.value.arn
-
-  policy = {
+  policy = jsonencode({
     Version = "2008-10-17"
-    Id      = each.value.name
+    Id      = "destination_rds_failed_snapshot_delete"
     Statement = [
       {
         Sid    = "sns-permissions"
@@ -37,15 +37,48 @@ resource "aws_sns_topic_policy" "this" {
         }
       }
     ]
-  }
+  })
 }
 
+resource "aws_sns_topic_policy" "delete_failed_dest" {
+  arn = aws_sns_topic.delete_old_failed_dest.arn // in tf there is not a cfn "topcs" attribute which allows a list. 
 
+  policy = jsonencode({
+    Version = "2008-10-17"
+    Id      = "destination_rds_failed_snapshot_delete"
+    Statement = [
+      {
+        Sid    = "sns-permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "*"
+        }
+        Action = [
+          "SNS:GetTopicAttributes",
+          "SNS:SetTopicAttributes",
+          "SNS:AddPermission",
+          "SNS:RemovePermission",
+          "SNS:DeleteTopic",
+          "SNS:Subscribe",
+          "SNS:ListSubscriptionsByTopic",
+          "SNS:Publish",
+          "SNS:Receive"
+        ]
+        Resource = "*"
+        Condition = {
+          test     = "StringEquals"
+          variable = "AWS:SourceOwner"
+          values   = [data.aws_caller_identity.current.account_id]
+        }
+      }
+    ]
+  })
+}
 
 resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
-  arn = aws_sns_topic.topic_copy_failed_dest.arn
+  arn = aws_sns_topic.copy_failed_dest.arn
 
-  policy = {
+  policy = jsonencode({
     Version = "2008-10-17"
     Id      = "destination_rds_failed_snapshot_copy"
     Statement = [
@@ -74,7 +107,7 @@ resource "aws_sns_topic_policy" "snspolicy_copy_failed_dest" {
         }
       }
     ]
-  }
+  })
 }
 
 resource "aws_cloudwatch_metric_alarm" "alarmcw_copy_failed_dest" {
@@ -88,12 +121,12 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_copy_failed_dest" {
   threshold           = "1.0"
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.statemachine_copy_snapshots_dest_rds.id
+    StateMachineArn = aws_sfn_state_machine.statemachine_delete_old_snapshots_dest_rds.arn
   }
 
   alarm_description = "This metric monitors state machine failure for copying snapshots"
   alarm_actions = [
-    aws_sns_topic.topic_copy_failed_dest.id
+    aws_sns_topic.copy_failed_dest.id
   ]
 }
 
@@ -108,12 +141,12 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_delete_old_failed_dest" {
   threshold           = "2.0"
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.statemachine_copy_snapshots_dest_rds.id
+    StateMachineArn = aws_sfn_state_machine.statemachine_copy_old_snapshots_dest_rds.arn
   }
 
   alarm_description = "This metric monitors state machine failure for deleting old snapshots"
   alarm_actions = [
-    aws_sns_topic.topic_delete_old_failed_dest.id
+    aws_sns_topic.delete_old_failed_dest.id
   ]
 }
 
@@ -229,11 +262,11 @@ resource "aws_iam_role_policy_attachment" "attachment" {
 }
 
 resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
-  s3_bucket = var.code_bucket
-  s3_key    = local.CrossAccount ? "copy_snapshots_dest_rds.zip" : "copy_snapshots_no_x_account_rds.zip"
-
-  memory_size = 512
-  description = "This functions copies snapshots for RDS Instances shared with this account. It checks for existing snapshots following the pattern specified in the environment variables with the following format: <dbInstanceIdentifier-identifier>-YYYY-MM-DD-HH-MM"
+  function_name = "snapshot-copier"
+  description   = "This functions copies snapshots for RDS Instances shared with this account. It checks for existing snapshots following the pattern specified in the environment variables with the following format: <dbInstanceIdentifier-identifier>-YYYY-MM-DD-HH-MM"
+  s3_bucket     = var.code_bucket
+  s3_key        = local.CrossAccount ? "copy_snapshots_dest_rds.zip" : "copy_snapshots_no_x_account_rds.zip"
+  memory_size   = 512
   environment {
     variables = {
       SNAPSHOT_PATTERN      = var.snapshot_pattern
@@ -252,11 +285,13 @@ resource "aws_lambda_function" "lambda_copy_snapshots_rds" {
 }
 
 resource "aws_lambda_function" "delete_old_dest_rds" {
-  count       = locals.DeleteOld ? 1 : 0
-  s3_bucket   = var.code_bucket
-  s3_key      = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
-  memory_size = 512
-  description = "This function enforces retention on the snapshots shared with the destination account. "
+  function_name = "dest-snapshot-retention"
+  description   = "This function enforces retention on the snapshots shared with the destination account. "
+  count         = locals.DeleteOld ? 1 : 0
+  s3_bucket     = var.code_bucket
+  s3_key        = local.CrossAccount ? "delete_old_snapshots_dest_rds.zip" : "delete_old_snapshots_no_x_account_rds.zip"
+  memory_size   = 512
+
   environment {
     variables = {
       SNAPSHOT_PATTERN = var.snapshot_pattern
@@ -435,7 +470,7 @@ PATTERN
 resource "aws_cloudwatch_event_target" "copy_snapshots_rds" {
   rule      = aws_cloudwatch_event_rule.copy_snapshots_rds.name
   target_id = "DestTarget1"
-  arn       = aws_sfn_state_machine.statemachine_copy_snapshots_dest_rds.id
+  arn       = aws_sfn_state_machine.statemachine_copy_old_snapshots_dest_rds.id
   role_arn  = aws_iam_role.iamrole_step_invocation.arn
 }
 
