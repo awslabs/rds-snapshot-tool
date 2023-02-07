@@ -1,6 +1,7 @@
 variable "code_bucket" {
   description = "Name of the bucket that contains the lambda functions to deploy."
   type        = string
+  default     = "code-bucket-816708952522"
 }
 
 variable "snapshot_pattern" {
@@ -18,6 +19,7 @@ variable "retention_days" {
 variable "destination_region" {
   description = "Destination region for snapshots."
   type        = string
+  default     = "us-east-2"
 }
 
 variable "log_level" {
