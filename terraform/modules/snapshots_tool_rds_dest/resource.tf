@@ -259,7 +259,7 @@ resource "aws_lambda_function" "lambda_delete_old_dest_rds" {
 }
 
 resource "aws_iam_role" "iamrole_state_execution" {
-  assume_role_policy = {
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -270,24 +270,23 @@ resource "aws_iam_role" "iamrole_state_execution" {
         Action = "sts:AssumeRole"
       }
     ]
+  })
+  force_detach_policies = true
+  inline_policy {
+    name = "inline_policy_rds_snapshot"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "lambda:InvokeFunction"
+          ]
+          Resource = "*"
+        }
+      ]
+    })
   }
-  force_detach_policies = [
-    {
-      PolicyName = "inline_policy_rds_snapshot"
-      PolicyDocument = {
-        Version = "2012-10-17"
-        Statement = [
-          {
-            Effect = "Allow"
-            Action = [
-              "lambda:InvokeFunction"
-            ]
-            Resource = "*"
-          }
-        ]
-      }
-    }
-  ]
 }
 
 resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_dest_rds" {
