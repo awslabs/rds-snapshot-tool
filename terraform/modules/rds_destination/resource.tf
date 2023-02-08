@@ -197,36 +197,6 @@ resource "aws_lambda_function" "delete_old_dest_rds" {
   timeout = 300
 }
 
-resource "aws_iam_role" "iamrole_state_execution" {
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = join("", ["states.", data.aws_region.current.name, ".amazonaws.com"])
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-  force_detach_policies = true
-  inline_policy {
-    name = "inline_policy_rds_snapshot"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Effect = "Allow"
-          Action = [
-            "lambda:InvokeFunction"
-          ]
-          Resource = "*"
-        }
-      ]
-    })
-  }
-}
 
 resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_dest_rds" {
   count    = local.DeleteOld ? 1 : 0
@@ -304,37 +274,6 @@ EOF
 }
 
 
-resource "aws_iam_role" "iamrole_step_invocation" {
-  name = "invoke-state-machines"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "events.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-  force_detach_policies = true
-  inline_policy {
-    name = "inline_policy_state_invocation"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Effect = "Allow"
-          Action = [
-            "states:StartExecution"
-          ]
-          Resource = "*"
-        }
-      ]
-    })
-  }
-}
 
 
 resource "aws_cloudwatch_event_rule" "copy_snapshots_rds" {
@@ -366,25 +305,27 @@ resource "aws_cloudwatch_event_target" "copy_snapshots_rds" {
   role_arn  = aws_iam_role.iamrole_step_invocation.arn
 }
 
-# resource "aws_iot_topic_rule_destination" "cw_event_delete_old_snapshots_rds" {
-#   count = locals.DeleteOld ? 1 : 0
-#   // CF Property(Description) = "Triggers the RDS DeleteOld state machine in the destination account"
-#   // CF Property(ScheduleExpression) = join("", ["cron(", "0 /1 * * ? *", ")"])
-#   // CF Property(State) = "ENABLED"
-#   // CF Property(Targets) = [
-#   //   {
-#   //     Arn = aws_sfn_state_machine.statemachine_delete_old_snapshots_dest_rds[0].id
-#   //     Id = "Target1"
-#   //     RoleArn = aws_iam_role.iamrole_step_invocation.arn
-#   //   }
-#   // ]
-# }
+resource "aws_cloudwatch_event_rule" "delete_old_snapshots_rds" {
+  name                = "trigger-snapshot-delete-in-dest-account"
+  description         = "Triggers the RDS DeleteOld state machine in the destination account"
+  schedule_expression = "cron(0 /1 * * ? *)"
+  is_enabled          = true
+}
 
-# resource "aws_inspector_resource_group" "cwloggroup_delete_old_snapshots_dest_rds" {
-#   count = locals.DeleteOld ? 1 : 0
-#   // CF Property(RetentionInDays) = var.lambda_cw_log_retention
-#   // CF Property(LogGroupName) = "/aws/lambda/${var.log_group_name}"
-# }
+resource "aws_cloudwatch_event_target" "delete_old_snapshots_rds" {
+  count     = locals.DeleteOld ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.delete_old_snapshots_rds.name
+  target_id = "DestTarget1"
+  arn       = aws_sfn_state_machine.statemachine_delete_old_snapshots_dest_rds[0].id
+  role_arn  = aws_iam_role.iamrole_step_invocation.arn
+}
+
+resource "aws_cloudwatch_log_group" "cwloggroup_delete_old_snapshots_dest_rds" {
+  count             = locals.DeleteOld ? 1 : 0
+  name              = "/aws/lambda/${var.log_group_name}"
+  retention_in_days = var.lambda_cw_log_retention
+}
+
 
 resource "aws_cloudwatch_log_group" "copy_snapshots_rds" {
   name              = "/aws/lambda/${aws_lambda_function.lambda_copy_snapshots_rds.arn}"

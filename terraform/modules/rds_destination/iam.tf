@@ -82,3 +82,69 @@ resource "aws_iam_role_policy_attachment" "attachment" {
   role       = aws_iam_role.snapshots_rds.name
   policy_arn = aws_iam_policy.snapshot_rds.arn
 }
+
+
+
+resource "aws_iam_role" "iamrole_state_execution" {
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = join("", ["states.", data.aws_region.current.name, ".amazonaws.com"])
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+  force_detach_policies = true
+  inline_policy {
+    name = "inline_policy_rds_snapshot"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "lambda:InvokeFunction"
+          ]
+          Resource = "*"
+        }
+      ]
+    })
+  }
+}
+
+
+resource "aws_iam_role" "iamrole_step_invocation" {
+  name = "invoke-state-machines"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+  force_detach_policies = true
+  inline_policy {
+    name = "inline_policy_state_invocation"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "states:StartExecution"
+          ]
+          Resource = "*"
+        }
+      ]
+    })
+  }
+}
