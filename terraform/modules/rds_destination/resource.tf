@@ -313,7 +313,7 @@ resource "aws_cloudwatch_event_rule" "delete_old_snapshots_rds" {
 }
 
 resource "aws_cloudwatch_event_target" "delete_old_snapshots_rds" {
-  count     = locals.DeleteOld ? 1 : 0
+  count     = local.DeleteOld ? 1 : 0
   rule      = aws_cloudwatch_event_rule.delete_old_snapshots_rds.name
   target_id = "DestTarget1"
   arn       = aws_sfn_state_machine.statemachine_delete_old_snapshots_dest_rds[0].id
@@ -321,13 +321,13 @@ resource "aws_cloudwatch_event_target" "delete_old_snapshots_rds" {
 }
 
 resource "aws_cloudwatch_log_group" "cwloggroup_delete_old_snapshots_dest_rds" {
-  count             = locals.DeleteOld ? 1 : 0
+  count             = local.DeleteOld ? 1 : 0
   name              = "/aws/lambda/${var.log_group_name}"
   retention_in_days = var.lambda_cw_log_retention
 }
 
 
 resource "aws_cloudwatch_log_group" "copy_snapshots_rds" {
-  name              = "/aws/lambda/${aws_lambda_function.lambda_copy_snapshots_rds.arn}"
+  name              = "/aws/lambda/${aws_lambda_function.lambda_copy_snapshots_rds.function_name}"
   retention_in_days = var.lambda_cw_log_retention
 }
