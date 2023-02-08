@@ -14,69 +14,68 @@ resource "aws_iam_role" "snapshots_rds" {
   force_detach_policies = true
 }
 
-resource "aws_iam_policy" "snapshot_rds" {
-  name = "rds_kms_access"
+data "aws_iam_policy_document" "snapshot_rds" {
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowUseOfTheKey"
-        Effect = "Allow"
-        Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:DescribeKey"
-        ]
-        Resource = [
-          "*"
-        ]
-      },
-      {
-        Sid    = "AllowAttachmentOfPersistentResources"
-        Effect = "Allow"
-        Action = [
-          "kms:CreateGrant",
-          "kms:ListGrants",
-          "kms:RevokeGrant"
-        ]
-        Resource = [
-          "*"
-        ]
-        Condition = {
-          test     = "Bool"
-          variable = "kms:GrantIsForAWSResource"
-          values   = ["True"]
-        }
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "rds:CreateDBSnapshot",
-          "rds:DeleteDBSnapshot",
-          "rds:DescribeDBInstances",
-          "rds:DescribeDBSnapshots",
-          "rds:ModifyDBSnapshotAttribute",
-          "rds:DescribeDBSnapshotAttributes",
-          "rds:CopyDBSnapshot",
-          "rds:ListTagsForResource",
-          "rds:AddTagsToResource"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
+  statement {
+    sid    = "AllowUseOfTheKey"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
     ]
-  })
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    sid    = "AllowAttachmentOfPersistentResources"
+    effect = "Allow"
+    actions = [
+      "kms:CreateGrant",
+      "kms:ListGrants",
+      "kms:RevokeGrant"
+    ]
+    resources = [
+      "*"
+    ]
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["True"]
+    }
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "rds:CreateDBSnapshot",
+      "rds:DeleteDBSnapshot",
+      "rds:DescribeDBInstances",
+      "rds:DescribeDBSnapshots",
+      "rds:ModifyDBSnapshotAttribute",
+      "rds:DescribeDBSnapshotAttributes",
+      "rds:CopyDBSnapshot",
+      "rds:ListTagsForResource",
+      "rds:AddTagsToResource"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["arn:aws:logs:*:*:*"]
+  }
+}
+
+resource "aws_iam_policy" "snapshot_rds" {
+  name   = "snapshot_rds"
+  policy = data.aws_iam_policy_document.snapshot_rds.json
 }
 resource "aws_iam_role_policy_attachment" "attachment" {
   role       = aws_iam_role.snapshots_rds.name
