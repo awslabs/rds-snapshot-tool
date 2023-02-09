@@ -1,6 +1,5 @@
-
-resource "aws_iam_role" "iamrole_snapshots_rds" {
-  assume_role_policy = {
+resource "aws_iam_role" "snapshots_rds" {
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -11,53 +10,66 @@ resource "aws_iam_role" "iamrole_snapshots_rds" {
         Action = "sts:AssumeRole"
       }
     ]
+  })
+  force_detach_policies = true
+}
+
+data "aws_iam_policy_document" "snapshot_rds" {
+
+  statement {
+    sid    = "inline_policy_snapshots_rds_cw_logs"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["arn:aws:logs:*:*:*"]
   }
-  force_detach_policies = [
-    {
-      PolicyName = "inline_policy_snapshots_rds_cw_logs"
-      PolicyDocument = {
-        Version = "2012-10-17"
-        Statement = [
-          {
-            Effect = "Allow"
-            Action = [
-              "logs:CreateLogGroup",
-              "logs:CreateLogStream",
-              "logs:PutLogEvents"
-            ]
-            Resource = "arn:aws:logs:*:*:*"
-          }
-        ]
+
+  statement {
+    sid    = "inline_policy_snapshots_rds"
+    effect = "Allow"
+    actions = [
+      "rds:CreateDBSnapshot",
+      "rds:DeleteDBSnapshot",
+      "rds:DescribeDBInstances",
+      "rds:DescribeDBSnapshots",
+      "rds:ModifyDBSnapshotAttribute",
+      "rds:DescribeDBSnapshotAttributes",
+      "rds:ListTagsForResource",
+      "rds:AddTagsToResource"
+    ]
+    resources = ["*"]
+
+  }
+
+}
+
+resource "aws_iam_policy" "snapshot_rds" {
+  name   = "snapshot_rds"
+  policy = data.aws_iam_policy_document.snapshot_rds.json
+}
+
+resource "aws_iam_role" "state_execution" {
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
       }
-    },
-    {
-      PolicyName = "inline_policy_snapshots_rds"
-      PolicyDocument = {
-        Version = "2012-10-17"
-        Statement = [
-          {
-            Effect = "Allow"
-            Action = [
-              "rds:CreateDBSnapshot",
-              "rds:DeleteDBSnapshot",
-              "rds:DescribeDBInstances",
-              "rds:DescribeDBSnapshots",
-              "rds:ModifyDBSnapshotAttribute",
-              "rds:DescribeDBSnapshotAttributes",
-              "rds:ListTagsForResource",
-              "rds:AddTagsToResource"
-            ]
-            Resource = "*"
-          }
-        ]
-      }
-    }
-  ]
+    ]
+  })
+  force_detach_policies = true
 }
 
 
 resource "aws_iam_role" "iamrole_state_execution" {
-  assume_role_policy = {
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -68,28 +80,28 @@ resource "aws_iam_role" "iamrole_state_execution" {
         Action = "sts:AssumeRole"
       }
     ]
+  })
+  force_detach_policies = true
+  inline_policy {
+    name = "inline_policy_rds_snapshot"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "lambda:InvokeFunction"
+          ]
+          Resource = "*"
+        }
+      ]
+    })
   }
-  force_detach_policies = [
-    {
-      PolicyName = "inline_policy_snapshots_rds"
-      PolicyDocument = {
-        Version = "2012-10-17"
-        Statement = [
-          {
-            Effect = "Allow"
-            Action = [
-              "lambda:InvokeFunction"
-            ]
-            Resource = "*"
-          }
-        ]
-      }
-    }
-  ]
 }
 
 resource "aws_iam_role" "iamrole_step_invocation" {
-  assume_role_policy = {
+  name = "invoke-state-machines"
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -100,22 +112,21 @@ resource "aws_iam_role" "iamrole_step_invocation" {
         Action = "sts:AssumeRole"
       }
     ]
+  })
+  force_detach_policies = true
+  inline_policy {
+    name = "inline_policy_state_invocation"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "states:StartExecution"
+          ]
+          Resource = "*"
+        }
+      ]
+    })
   }
-  force_detach_policies = [
-    {
-      PolicyName = "inline_policy_state_invocation"
-      PolicyDocument = {
-        Version = "2012-10-17"
-        Statement = [
-          {
-            Effect = "Allow"
-            Action = [
-              "states:StartExecution"
-            ]
-            Resource = "*"
-          }
-        ]
-      }
-    }
-  ]
 }
