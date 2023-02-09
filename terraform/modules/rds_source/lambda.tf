@@ -1,11 +1,10 @@
 
 resource "aws_lambda_function" "lambda_take_snapshots_rds" {
-  code_signing_config_arn = {
-    S3Bucket = var.code_bucket
-    S3Key    = "take_snapshots_rds.zip"
-  }
-  memory_size = 512
-  description = "This functions triggers snapshots creation for RDS instances. It checks for existing snapshots following the pattern and interval specified in the environment variables with the following format: <dbinstancename>-YYYY-MM-DD-HH-MM"
+  function_name = "take-rds-snapshots"
+  s3_bucket     = var.code_bucket
+  s3_key        = "take_snapshots_rds.zip"
+  memory_size   = 512
+  description   = "This functions triggers snapshots creation for RDS instances. It checks for existing snapshots following the pattern and interval specified in the environment variables with the following format: <dbinstancename>-YYYY-MM-DD-HH-MM"
   environment {
     variables = {
       INTERVAL        = var.backup_interval
@@ -15,20 +14,19 @@ resource "aws_lambda_function" "lambda_take_snapshots_rds" {
       TAGGEDINSTANCE  = var.tagged_instance
     }
   }
-  role    = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300
 }
 
 resource "aws_lambda_function" "lambda_share_snapshots_rds" {
-  count = locals.Share ? 1 : 0
-  code_signing_config_arn = {
-    S3Bucket = var.code_bucket
-    S3Key    = "share_snapshots_rds.zip"
-  }
-  memory_size = 512
-  description = "This function shares snapshots created by the take_snapshots_rds function with DEST_ACCOUNT specified in the environment variables. "
+  count         = local.Share ? 1 : 0
+  function_name = "share-rds-snapshot"
+  s3_bucket     = var.code_bucket
+  s3_key        = "share_snapshots_rds.zip"
+  memory_size   = 512
+  description   = "This function shares snapshots created by the take_snapshots_rds function with DEST_ACCOUNT specified in the environment variables. "
   environment {
     variables = {
       DEST_ACCOUNT    = var.destination_account
@@ -37,20 +35,19 @@ resource "aws_lambda_function" "lambda_share_snapshots_rds" {
       REGION_OVERRIDE = var.source_region_override
     }
   }
-  role    = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300
 }
 
-resource "aws_lambda_function" "lambda_delete_old_snapshots_rds" {
-  count = locals.DeleteOld ? 1 : 0
-  code_signing_config_arn = {
-    S3Bucket = var.code_bucket
-    S3Key    = "delete_old_snapshots_rds.zip"
-  }
-  memory_size = 512
-  description = "This function deletes snapshots created by the take_snapshots_rds function. "
+resource "aws_lambda_function" "lambda_delete_snapshots_rds" {
+  count         = local.DeleteOld ? 1 : 0
+  function_name = "delete-old-rds-snapshots"
+  s3_bucket     = var.code_bucket
+  s3_key        = "delete_old_snapshots_rds.zip"
+  memory_size   = 512
+  description   = "This function deletes snapshots created by the take_snapshots_rds function. "
   environment {
     variables = {
       RETENTION_DAYS  = var.retention_days
@@ -59,7 +56,7 @@ resource "aws_lambda_function" "lambda_delete_old_snapshots_rds" {
       REGION_OVERRIDE = var.source_region_override
     }
   }
-  role    = aws_iam_role.iamrole_snapshots_rds.arn
+  role    = aws_iam_role.snapshots_rds.arn
   runtime = "python3.7"
   handler = "lambda_function.lambda_handler"
   timeout = 300

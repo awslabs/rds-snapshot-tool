@@ -16,7 +16,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_backups_failed" {
 
   alarm_description = ""
   alarm_actions = [
-    aws_sns_topic.topic_backups_failed.id
+    aws_sns_topic.backups_failed.id
   ]
 }
 
@@ -37,7 +37,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_share_failed" {
 
   alarm_description = ""
   alarm_actions = [
-    aws_sns_topic.topic_share_failed.id
+    aws_sns_topic.share_failed.id
   ]
 }
 
@@ -58,7 +58,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_delete_old_failed" {
 
   alarm_description = ""
   alarm_actions = [
-    aws_sns_topic.topic_delete_old_failed.id
+    aws_sns_topic.delete_old_failed.id
   ]
 }
 
@@ -72,7 +72,7 @@ resource "aws_cloudwatch_event_rule" "backup_rds" {
 resource "aws_cloudwatch_event_target" "backup_rds" {
   rule      = aws_cloudwatch_event_rule.backup_rds.name
   target_id = "TakeSnapshotTarget1"
-  arn       = aws_sfn_state_machine.state_machine_take_snapshots_rds[0].id
+  arn       = aws_sfn_state_machine.state_machine_take_snapshots_rds.id
   role_arn  = aws_iam_role.iamrole_step_invocation.arn
 }
 
@@ -87,7 +87,7 @@ resource "aws_cloudwatch_event_rule" "share_snapshots_rds" {
 
 resource "aws_cloudwatch_event_target" "share_snapshots_rds" {
   count     = local.DeleteOld ? 1 : 0
-  rule      = aws_cloudwatch_event_rule.share_snapshots_rds.name
+  rule      = aws_cloudwatch_event_rule.share_snapshots_rds[*].name
   target_id = "ShareSnapshotTarget1"
   arn       = aws_sfn_state_machine.statemachine_share_snapshots_rds[0].id
   role_arn  = aws_iam_role.iamrole_step_invocation.arn
