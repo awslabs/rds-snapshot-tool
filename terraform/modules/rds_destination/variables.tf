@@ -1,7 +1,7 @@
 variable "code_bucket" {
   description = "Name of the bucket that contains the lambda functions to deploy."
   type        = string
-  default     = "code-bucket-816708952522"
+  default     = ""
 }
 
 variable "snapshot_pattern" {
