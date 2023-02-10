@@ -47,7 +47,7 @@ data "aws_iam_policy_document" "snapshot_rds" {
 }
 
 resource "aws_iam_policy" "snapshot_rds" {
-  name   = "snapshot_rds"
+  name   = "snapshot_rds_source"
   policy = data.aws_iam_policy_document.snapshot_rds.json
 }
 
