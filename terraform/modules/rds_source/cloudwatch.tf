@@ -21,7 +21,6 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_backups_failed" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alarmcw_share_failed" {
-  count               = local.Share ? 1 : 0
   alarm_name          = "failed-rds-delete-old-snapshot"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "2"
@@ -32,7 +31,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_share_failed" {
   threshold           = "2.0"
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.statemachine_share_snapshots_rds[*].arn
+    StateMachineArn = aws_sfn_state_machine.statemachine_share_snapshots_rds.arn
   }
 
   alarm_description = ""
@@ -42,7 +41,6 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_share_failed" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alarmcw_delete_old_failed" {
-  count               = local.DeleteOld ? 1 : 0
   alarm_name          = "failed-rds-delete-old-snapshot"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "2"
@@ -53,7 +51,7 @@ resource "aws_cloudwatch_metric_alarm" "alarmcw_delete_old_failed" {
   threshold           = "2.0"
 
   dimensions = {
-    StateMachineArn = aws_sfn_state_machine.statemachine_delete_old_snapshots_rds[*].arn
+    StateMachineArn = aws_sfn_state_machine.statemachine_share_snapshots_rds.arn
   }
 
   alarm_description = ""
@@ -78,7 +76,6 @@ resource "aws_cloudwatch_event_target" "backup_rds" {
 
 
 resource "aws_cloudwatch_event_rule" "share_snapshots_rds" {
-  count               = local.DeleteOld ? 1 : 0
   name                = "trigger-share-snapshot-state-machine"
   description         = "Triggers the ShareSnapshotsRDS state machine"
   schedule_expression = "cron(/10 * * * ? *)"
@@ -86,10 +83,9 @@ resource "aws_cloudwatch_event_rule" "share_snapshots_rds" {
 }
 
 resource "aws_cloudwatch_event_target" "share_snapshots_rds" {
-  count     = local.DeleteOld ? 1 : 0
-  rule      = aws_cloudwatch_event_rule.share_snapshots_rds[*].name
+  rule      = aws_cloudwatch_event_rule.share_snapshots_rds.name
   target_id = "ShareSnapshotTarget1"
-  arn       = aws_sfn_state_machine.statemachine_share_snapshots_rds[0].id
+  arn       = aws_sfn_state_machine.statemachine_share_snapshots_rds.id
   role_arn  = aws_iam_role.iamrole_step_invocation.arn
 }
 
@@ -103,7 +99,7 @@ resource "aws_cloudwatch_event_rule" "delete_old_snapshots_rds" {
 resource "aws_cloudwatch_event_target" "delete_old_snapshots_rds" {
   rule      = aws_cloudwatch_event_rule.delete_old_snapshots_rds.name
   target_id = "DeleteSnapshotTarget1"
-  arn       = aws_sfn_state_machine.statemachine_delete_old_snapshots_rds[0].id
+  arn       = aws_sfn_state_machine.statemachine_delete_old_snapshots_rds.id
   role_arn  = aws_iam_role.iamrole_step_invocation.arn
 }
 
@@ -114,8 +110,7 @@ resource "aws_cloudwatch_log_group" "take_snapshots_rds" {
 
 
 resource "aws_cloudwatch_log_group" "share_snapshots_rds" {
-  count             = local.Share ? 1 : 0
-  name              = "/aws/lambda/${aws_lambda_function.lambda_share_snapshots_rds[0].arn}"
+  name              = "/aws/lambda/${aws_lambda_function.lambda_share_snapshots_rds.arn}"
   retention_in_days = var.lambda_cw_log_retention
 }
 

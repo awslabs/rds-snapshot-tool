@@ -21,7 +21,6 @@ resource "aws_lambda_function" "lambda_take_snapshots_rds" {
 }
 
 resource "aws_lambda_function" "lambda_share_snapshots_rds" {
-  count         = local.Share ? 1 : 0
   function_name = "share-rds-snapshot"
   s3_bucket     = var.code_bucket
   s3_key        = "share_snapshots_rds.zip"
@@ -42,7 +41,6 @@ resource "aws_lambda_function" "lambda_share_snapshots_rds" {
 }
 
 resource "aws_lambda_function" "lambda_delete_snapshots_rds" {
-  count         = local.DeleteOld ? 1 : 0
   function_name = "delete-old-rds-snapshots"
   s3_bucket     = var.code_bucket
   s3_key        = "delete_old_snapshots_rds.zip"

@@ -37,7 +37,6 @@ EOF
 }
 
 resource "aws_sfn_state_machine" "statemachine_share_snapshots_rds" {
-  count    = local.Share ? 1 : 0
   name     = "share-snapshots-rds"
   role_arn = aws_iam_role.iamrole_state_execution.arn
 
@@ -48,8 +47,9 @@ resource "aws_sfn_state_machine" "statemachine_share_snapshots_rds" {
 	"States": {
 		"ShareSnapshots": {
 			"Type": "Task",
-			"Resource": "${aws_lambda_function.lambda_share_snapshots_rds[*].arn}",
-			"Retry": [{
+			"Resource": "${aws_lambda_function.lambda_share_snapshots_rds.arn}",
+			"Retry": [
+				{
 					"ErrorEquals": [
 						"SnapshotToolException"
 					],
@@ -75,7 +75,6 @@ EOF
 }
 
 resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_rds" {
-  count    = local.DeleteOld ? 1 : 0
   name     = "delete-old-snapshots-source-rds"
   role_arn = aws_iam_role.iamrole_state_execution.arn
 
@@ -86,8 +85,9 @@ resource "aws_sfn_state_machine" "statemachine_delete_old_snapshots_rds" {
 	"States": {
 		"DeleteOldDestRegion": {
 			"Type": "Task",
-			"Resource": "${aws_lambda_function.lambda_delete_snapshots_rds[*].arn}",
-			"Retry": [{
+			"Resource": "${aws_lambda_function.lambda_delete_snapshots_rds.arn}",
+			"Retry": [
+				{
 					"ErrorEquals": [
 						"SnapshotToolException"
 					],
