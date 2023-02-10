@@ -19,7 +19,7 @@ variable "backup_interval" {
 variable "destination_account" {
   description = "Destination account with no dashes."
   type        = string
-  default     = "000000000000"
+  default     = "817503874046"
 }
 
 variable "share_snapshots" {

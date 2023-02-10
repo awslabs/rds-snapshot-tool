@@ -1,4 +1,5 @@
 resource "aws_iam_role" "snapshots_rds" {
+  name = "snapshot-rds-source"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -24,7 +25,7 @@ data "aws_iam_policy_document" "snapshot_rds" {
       "logs:CreateLogStream",
       "logs:PutLogEvents"
     ]
-    resources = ["arn:aws:logs:*:*:*"]
+    resources = ["*"]
   }
 
   statement {
@@ -46,10 +47,11 @@ data "aws_iam_policy_document" "snapshot_rds" {
 
 }
 
-resource "aws_iam_policy" "snapshot_rds" {
-  name   = "snapshot_rds_source"
-  policy = data.aws_iam_policy_document.snapshot_rds.json
+resource "aws_iam_role_policy_attachment" "snapshot_rds" {
+  role       = aws_iam_role.snapshots_rds.name
+  policy_arn = data.aws_iam_policy_document.snapshot_rds.json
 }
+
 
 resource "aws_iam_role" "state_execution" {
   assume_role_policy = jsonencode({
@@ -69,6 +71,7 @@ resource "aws_iam_role" "state_execution" {
 
 
 resource "aws_iam_role" "iamrole_state_execution" {
+  name = "invoke-state-machine-rds-source"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -91,6 +94,7 @@ resource "aws_iam_role" "iamrole_state_execution" {
           Effect = "Allow"
           Action = [
             "lambda:InvokeFunction"
+
           ]
           Resource = "*"
         }
