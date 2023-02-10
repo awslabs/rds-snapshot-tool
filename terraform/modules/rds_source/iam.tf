@@ -17,7 +17,7 @@ resource "aws_iam_role" "snapshots_rds" {
 data "aws_iam_policy_document" "snapshot_rds" {
 
   statement {
-    sid    = "inline_policy_snapshots_rds_cw_logs"
+    sid    = "snapshotsRdsCwLogs"
     effect = "Allow"
     actions = [
       "logs:CreateLogGroup",
@@ -28,7 +28,7 @@ data "aws_iam_policy_document" "snapshot_rds" {
   }
 
   statement {
-    sid    = "inline_policy_snapshots_rds"
+    sid    = "snapshotsRds"
     effect = "Allow"
     actions = [
       "rds:CreateDBSnapshot",
@@ -100,7 +100,7 @@ resource "aws_iam_role" "iamrole_state_execution" {
 }
 
 resource "aws_iam_role" "iamrole_step_invocation" {
-  name = "invoke-state-machines"
+  name = "invoke-state-machines-rds-source"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

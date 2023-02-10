@@ -104,13 +104,13 @@ resource "aws_cloudwatch_event_target" "delete_old_snapshots_rds" {
 }
 
 resource "aws_cloudwatch_log_group" "take_snapshots_rds" {
-  name              = "/aws/lambda/${aws_lambda_function.lambda_take_snapshots_rds.arn}"
+  name              = "/aws/lambda/${aws_lambda_function.lambda_take_snapshots_rds.function_name}"
   retention_in_days = var.lambda_cw_log_retention
 }
 
 
 resource "aws_cloudwatch_log_group" "share_snapshots_rds" {
-  name              = "/aws/lambda/${aws_lambda_function.lambda_share_snapshots_rds.arn}"
+  name              = "/aws/lambda/${aws_lambda_function.lambda_share_snapshots_rds.function_name}"
   retention_in_days = var.lambda_cw_log_retention
 }
 

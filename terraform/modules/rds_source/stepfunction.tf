@@ -5,33 +5,32 @@ resource "aws_sfn_state_machine" "state_machine_take_snapshots_rds" {
 
   definition = <<EOF
 {
-  "Comment":"Triggers snapshot backup for RDS instances",
- "StartAt":"TakeSnapshots"
-  "States": {
-    "TakeSnapshots": {
-      "Type": "Task",
-      "Resource": "${aws_lambda_function.lambda_take_snapshots_rds.arn}",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "SnapshotToolException"
-          ],
-          "IntervalSeconds": 300,
-          "MaxAttempts": 20,
-          "BackoffRate": 1
-        },
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "IntervalSeconds": 30,
-          "MaxAttempts": 20,
-          "BackoffRate": 1
-        }
-      ],
-      "End": true
-    }
-  }
+	"Comment": "Triggers snapshot backup for RDS instances",
+	"StartAt": "TakeSnapshots",
+	"States": {
+		"TakeSnapshots": {
+			"Type": "Task",
+			"Resource": "${aws_lambda_function.lambda_take_snapshots_rds.arn}",
+			"Retry": [{
+					"ErrorEquals": [
+						"SnapshotToolException"
+					],
+					"IntervalSeconds": 300,
+					"MaxAttempts": 20,
+					"BackoffRate": 1
+				},
+				{
+					"ErrorEquals": [
+						"States.ALL"
+					],
+					"IntervalSeconds": 30,
+					"MaxAttempts": 20,
+					"BackoffRate": 1
+				}
+			],
+			"End": true
+		}
+	}
 }
 EOF 
 }
