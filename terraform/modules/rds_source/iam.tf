@@ -47,9 +47,14 @@ data "aws_iam_policy_document" "snapshot_rds" {
 
 }
 
+resource "aws_iam_policy" "snapshot_rds" {
+  name   = "snapshot-rds-policy"
+  policy = data.aws_iam_policy_document.snapshot_rds.json
+}
+
 resource "aws_iam_role_policy_attachment" "snapshot_rds" {
   role       = aws_iam_role.snapshots_rds.name
-  policy_arn = data.aws_iam_policy_document.snapshot_rds.json
+  policy_arn = aws_iam_policy.snapshot_rds.arn
 }
 
 
