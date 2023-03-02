@@ -527,7 +527,7 @@
 			"Properties": {
 				"Description": "Triggers the RDS DeleteOld state machine in the destination account",
 				"ScheduleExpression": {
-					"Fn::Join": ["", ["cron(", "0 /1 * * ? *", ")"]]
+					"Fn::Join": ["", ["cron(", "0 */1 * * ? *", ")"]]
 				},
 				"State": "ENABLED",
 				"Targets": [{
