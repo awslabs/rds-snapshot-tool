@@ -507,7 +507,7 @@
 			"Properties": {
 				"Description": "Triggers the RDS Copy state machine in the destination account",
 				"ScheduleExpression": {
-					"Fn::Join": ["", ["cron(", "/30 * * * ? *", ")"]]
+					"Fn::Join": ["", ["cron(", "*/30 * * * ? *", ")"]]
 				},
 				"State": "ENABLED",
 				"Targets": [{
